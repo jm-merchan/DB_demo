@@ -59,6 +59,12 @@ Targets are a wrapper of host (host-sets) and permisions (in the form of credent
 
 ![1706094472972](image/README/1706094472972.png)
 
+```bash
+cd ../2_Config
+terraform init
+terraform apply -auto-approve
+```
+
 We distinguish 3 level of roles within the DB for which Vault will generate Dynamic Credentials
 
 | Role      | Permissions                                    | Comments                                                                                            |
@@ -138,8 +144,6 @@ SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, co
 Type "help" for help.northwind=>
 ```
 
-
-
 ### 2.1. Inputs
 
 | Variable      | Type   | Example               | Description                                                            | Required |
@@ -149,8 +153,6 @@ Type "help" for help.northwind=>
 | region        | String | "eu-west-2"           | AWS Region                                                             | Yes      |
 | key_pair_name | String | "cert"                | Name of the key pair that will be used to create the EC2 instance      | Yes      |
 | authmethod    | String | "ampw_g7gkG7hioT"     | Boundary Auth Method ID. Introduced as enviromental variable in step 1 | Yes      |
-
-
 
 # 3. Mapping IdP (OIDC) Users to targets based on roles
 

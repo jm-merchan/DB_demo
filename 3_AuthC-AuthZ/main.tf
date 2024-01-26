@@ -45,3 +45,11 @@ data "terraform_remote_state" "local_backend" {
     path = "../1_Platform/terraform.tfstate"
   }
 }
+
+data "terraform_remote_state" "boundary" {
+  backend = "local"
+
+  config = {
+    path = "../2_Config/terraform.tfstate"
+  }
+}
