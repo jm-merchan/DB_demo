@@ -183,11 +183,35 @@ terraform apply -auto-approve
 * We are setting up Boundary to use Auth0 for authentication, defining the proper callback URLs.
 * We are creating 4 users that will be mapped to different roles within Auth0.
 
-Clean UP
+# Clean UP
 
+```bash
+terraform destroy -auto-approve
+cd ../2_Config/
 vault lease revoke -force -prefix database && terraform destroy -auto-approve && rm -rf cert.pem
-
 cd ../1_Platform
+terraform destroy -auto-approve
+```
 
-|  |  |  |  |  |
-| - | - | - | - | - |
+# Installation in one-go
+
+```bash
+<AWS creds as env>
+<Auth0 creds as env>
+cd 1_Plataform/
+# Initialize TF
+terraform init
+# Requires interactive login to HCP to approve cluster creation
+terraform apply -auto-approve
+export BOUNDARY_ADDR=$(terraform output -json | jq -r .boundary_public_url.value)
+export VAULT_ADDR=$(terraform output -raw vault_public_url)
+export VAULT_NAMESPACE=admin
+export VAULT_TOKEN=$(terraform output -raw vault_token)Log to boundary interactively using password Auth with admin userboundary authenticate
+export TF_VAR_authmethod=$(boundary auth-methods list -format json | jq -r '.items[0].id')
+cd ../2_Config/
+terraform init
+terraform apply -auto-approve
+cd ../3_AuthC-AuthZ
+terraform init
+terraform apply -auto-approve
+```
