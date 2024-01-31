@@ -6,6 +6,10 @@ variable "password" {
   type = string
 }
 
+variable "db_name"{
+  type = string
+}
+
 variable "region" {
   description = "The region of the HCP HVN and Vault cluster."
   type        = string

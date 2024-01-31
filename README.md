@@ -206,7 +206,9 @@ terraform apply -auto-approve
 export BOUNDARY_ADDR=$(terraform output -json | jq -r .boundary_public_url.value)
 export VAULT_ADDR=$(terraform output -raw vault_public_url)
 export VAULT_NAMESPACE=admin
-export VAULT_TOKEN=$(terraform output -raw vault_token)Log to boundary interactively using password Auth with admin userboundary authenticate
+export VAULT_TOKEN=$(terraform output -raw vault_token)
+# Log to boundary interactively using password Auth with admin user
+boundary authenticate
 export TF_VAR_authmethod=$(boundary auth-methods list -format json | jq -r '.items[0].id')
 cd ../2_Config/
 terraform init

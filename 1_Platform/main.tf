@@ -32,6 +32,11 @@ provider "aws" {
   region = var.region
 }
 
+/* 
+  It will ask for interactive login via browser 
+  to obtain a token to operate with the API
+*/
+
 provider "hcp" {
 
 }

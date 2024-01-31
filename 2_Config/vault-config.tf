@@ -7,7 +7,7 @@ resource "vault_policy" "boundary_controller" {
 resource "vault_mount" "database" {
   path        = "database"
   type        = "database"
-  description = "This is an example Database Example"
+  description = "Postgres DB Engine"
 
   default_lease_ttl_seconds = 3600
   max_lease_ttl_seconds     = 7200
@@ -22,7 +22,7 @@ resource "vault_database_secret_backend_connection" "postgres" {
   # Going towards the private IP of the Ubuntu Server
   postgresql {
     connection_url = "postgresql://{{username}}:{{password}}@${data.terraform_remote_state.local_backend.outputs.rds_hostname}:5432/postgres?sslmode=disable"
-    username       = "demo"
+    username       = var.db_name
     password       = var.password
     max_open_connections = 5
   }
@@ -96,7 +96,6 @@ resource "vault_token" "boundary_token_db" {
   ]
   no_parent = true
   renewable = true
-
 
   renew_min_lease = 43200
   renew_increment = 86400
