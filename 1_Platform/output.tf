@@ -31,3 +31,8 @@ output "rds_hostname" {
   description = "RDS instance hostname"
   value       = aws_db_instance.boundary_demo.address
 }
+
+output "docdb_cluster_endpoint" {
+  description = "Endpoint URL of the DocumentDB Cluster"
+  value       = aws_docdb_cluster.docdb.endpoint
+}

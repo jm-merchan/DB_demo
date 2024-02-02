@@ -16,19 +16,6 @@ variable "authmethod" {
   type = string
 }
 
-
-variable "auth0_username" {
-  type = string
-}
-
-variable "auth0_name" {
-  type = string
-}
-
-variable "auth0_email" {
-  type = string
-}
-
 variable "auth0_password" {
   type = string
 }

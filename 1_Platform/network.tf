@@ -18,6 +18,21 @@ resource "aws_internet_gateway" "ig" {
   }
 }
 
+/* Elastic IP for NAT */
+resource "aws_eip" "nat_eip" {
+  domain        = "vpc"
+  depends_on = [aws_internet_gateway.ig]
+}
+/* NAT */
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public1.id
+  depends_on    = [aws_internet_gateway.ig]
+  tags = {
+    Name        = "nat"
+  }
+}
+
 # Deploy 2 Public Subnets
 resource "aws_subnet" "public1" {
   vpc_id                  = aws_vpc.vpc.id
@@ -85,6 +100,11 @@ resource "aws_route_table" "rt-public" {
 resource "aws_route_table" "rt-private" {
   vpc_id = aws_vpc.vpc.id
 
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat.id
+  }
+
   # Route traffic to the HVN peering connection
   route {
     cidr_block                = var.hvn_cidr
@@ -119,18 +139,6 @@ resource "aws_route_table_association" "private2" {
 data "http" "current" {
   url = "https://ifconfig.me/ip"
 }
-/*
-# Associate Subnets With Route Table
-resource "aws_route_table_association" "route1" {
-  subnet_id      = aws_subnet.public1.id
-  route_table_id = aws_route_table.rt.id
-}
-
-resource "aws_route_table_association" "route2" {
-  subnet_id      = aws_subnet.public2.id
-  route_table_id = aws_route_table.rt.id
-}
-*/
 
 # Deploy Security Groups
 resource "aws_security_group" "publicsg" {
@@ -146,7 +154,7 @@ resource "aws_security_group" "publicsg" {
   }
 
   ingress {
-    from_port   = 9200
+    from_port   = 9202
     to_port     = 9202
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
@@ -165,21 +173,27 @@ resource "aws_security_group" "privatesg" {
   name        = "Private Subnet Endpoints"
   description = "Boundary DB MGMT Demo"
   vpc_id      = aws_vpc.vpc.id
-
+  # Postgres
   ingress {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
     cidr_blocks = [var.aws_vpc_cidr, var.hvn_cidr]
   }
-
+  # SSH - just in case an EC2 is added
   ingress {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.publicsg.id]
   }
-
+  # Mongo
+  ingress {
+    from_port       = 27017
+    to_port         = 27018
+    protocol        = "tcp"
+    cidr_blocks = [var.aws_vpc_cidr, var.hvn_cidr]
+  }
   egress {
     from_port   = 0
     to_port     = 0

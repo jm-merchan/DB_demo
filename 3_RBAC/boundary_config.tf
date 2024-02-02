@@ -51,7 +51,7 @@ resource "boundary_role" "admin_project" {
   name          = "admin-project"
   description   = "Full Admin Permisions at Project level"
   principal_ids = [boundary_user.admin.id]
-  grant_strings = ["id=*;type=*;actions=*"]
+  grant_strings = ["ids=*;type=*;actions=*"]
   scope_id      = data.boundary_scope.project.id
 }
 
@@ -59,7 +59,7 @@ resource "boundary_role" "admin_org" {
   name          = "admin-org"
   description   = "Full Admin Permissions at Org level"
   principal_ids = [boundary_user.admin.id]
-  grant_strings = ["id=*;type=*;actions=*"]
+  grant_strings = ["ids=*;type=*;actions=*"]
   scope_id      = data.boundary_scope.org.id
 }
 
@@ -67,7 +67,7 @@ resource "boundary_role" "admin_global" {
   name          = "admin-org"
   description   = "Full Admin Permissions at Global level"
   principal_ids = [boundary_user.admin.id]
-  grant_strings = ["id=*;type=*;actions=*"]
+  grant_strings = ["ids=*;type=*;actions=*"]
   scope_id      = "global"
 }
 
@@ -94,9 +94,10 @@ resource "boundary_role" "dba" {
   description   = "Access to dba target"
   principal_ids = [boundary_user.dba.id]
   grant_strings = [
-    "id=${data.terraform_remote_state.boundary.outputs.target_dba};actions=authorize-session",
-    "id=*;type=session;actions=read:self,cancel:self,list",
-    "id=*;type=*;actions=read,list"
+    "ids=${data.terraform_remote_state.boundary.outputs.rds_target_dba};actions=authorize-session",
+    "ids=${data.terraform_remote_state.boundary.outputs.documentDB_target_dba};actions=authorize-session",
+    "ids=*;type=session;actions=read:self,cancel:self,list",
+    "ids=*;type=*;actions=read,list"
   ]
   scope_id = data.boundary_scope.project.id
 }
@@ -123,9 +124,10 @@ resource "boundary_role" "readwrite" {
   description   = "Access to read write db target"
   principal_ids = [boundary_user.read_write.id]
   grant_strings = [
-    "id=${data.terraform_remote_state.boundary.outputs.target_readwrite};actions=authorize-session",
-    "id=*;type=session;actions=read:self,cancel:self,list",
-    "id=*;type=*;actions=read,list"
+    "ids=${data.terraform_remote_state.boundary.outputs.rds_target_readwrite};actions=authorize-session",
+    "ids=${data.terraform_remote_state.boundary.outputs.documentDB_target_readwrite};actions=authorize-session",
+    "ids=*;type=session;actions=read:self,cancel:self,list",
+    "ids=*;type=*;actions=read,list"
   ]
   scope_id = data.boundary_scope.project.id
 }
@@ -152,9 +154,10 @@ resource "boundary_role" "readonly" {
   description   = "Access to read only target"
   principal_ids = [boundary_user.read_only.id]
   grant_strings = [
-    "id=${data.terraform_remote_state.boundary.outputs.target_readonly};actions=authorize-session",
-    "id=*;type=session;actions=read:self,cancel:self,list",
-    "id=*;type=*;actions=read,list"
+    "ids=${data.terraform_remote_state.boundary.outputs.rds_target_readonly};actions=authorize-session",
+    "ids=${data.terraform_remote_state.boundary.outputs.documentDB_target_readonly};actions=authorize-session",
+    "ids=*;type=session;actions=read:self,cancel:self,list",
+    "ids=*;type=*;actions=read,list"
   ]
   scope_id = data.boundary_scope.project.id
 }

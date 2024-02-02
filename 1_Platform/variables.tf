@@ -13,6 +13,11 @@ variable "password" {
   type = string
 }
 
+variable "db_username" {
+  type = string
+
+}
+
 variable "hvn_id" {
   description = "The ID of the HCP HVN."
   type        = string

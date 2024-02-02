@@ -6,7 +6,7 @@ variable "password" {
   type = string
 }
 
-variable "db_name"{
+variable "db_username"{
   type = string
 }
 

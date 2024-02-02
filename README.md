@@ -1,14 +1,18 @@
 # Securing DB Access MGMT with HashiCorp Boundary
 
-## 1. Building Vault and Boundary clusters in HCP and RDS instance
+#### Prerequisites
+
+* Terraform, Vault and Boundary CLI installed on your environment.
+
+## 1. Building Vault and Boundary clusters in HCP and Database (RDS and DocumentDB) instances
 
 The **Plataform** directory contains:
 
 * The code to build a Vault and Boundary cluster in HCP together with a VPC in your AWS account.
 * That VPC gets connected to HCP (where Vault is deployed) by means of a VPC peering with an HVN.
-* The VPC contains a Public and Private Subnet. In the private subnet we are deploying an RDS instance with a PostgreSQL engine (the database will be configured in a second steps)
+* The VPC contains a Public and Private Subnet. In the private subnet we are deploying an RDS instance with a PostgreSQL engine (the database will be configured in a second steps) and DocumentDB cluster
 * After deploying the infrastructure we set a number of environmental variables that are required for the upcoming deployments.
-* Finally, we authenticate with Boundary using the credentials we have defined within the `terraform.tfvars` file. Vault cluster is configured to send logs to Datadog.
+* Finally, we authenticate with Boundary using the credentials we have defined within the `terraform.tfvars` file. Vault cluster is configured to send logs to Datadog (simply comment the stanzas to avoid this).
 
 ```bash
 <export AWS Creds>
@@ -30,16 +34,20 @@ export TF_VAR_authmethod=$(boundary auth-methods list -format json | jq -r '.ite
 
 ### 1.1. Inputs
 
-| Variable            | Type   | Example                          | Description                                      | Required                                                                                                                                                       |
-| ------------------- | ------ | -------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| username            | String | "admin"                          | Boundary initial administrative account username | Yes                                                                                                                                                            |
-| password            | String | "N0tS0Secr3tPas$w0rd"            | Boundary initial administrative account password | Yes                                                                                                                                                            |
-| vault_tier          | String | "plus_small"                     | HCP Vault Tier                                   | Yes                                                                                                                                                            |
-| boundary_tier       | String | "PLUS"                           | HCP Boundary Tier                                | Yes                                                                                                                                                            |
-| datadog_api_key     | String | `<hex-api-key>`                | Datadog API Key                                  | Optional, remove `metrics_config` and `audit_log_config` stanzas in  `vault-deploy.tf`. Also remove variable `datadog_api_key` from `variables.tf` |
-| aws_vpc_cidr        | String | "10.0.0.0/16"                    | Class A Must be used                             | Yes                                                                                                                                                            |
-| vault_cluster_id    | String | "hcp-vault-cluster-for-boundary" | HCP Vault Cluster Name                           | Yes                                                                                                                                                            |
-| boundary_cluster_id | String | "hcp-boundary-cluster"           | HCP Boundary Cluster Name                        | Yes                                                                                                                                                            |
+| Variable              | Type   | Example                          | Description                                      | Required                                                                                                                                                       |
+| --------------------- | ------ | -------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| username              | String | "admin"                          | Boundary initial administrative account username | Yes                                                                                                                                                            |
+| password              | String | "N0tS0Secr3tPas$w0rd"            | Boundary initial administrative account password | Yes                                                                                                                                                            |
+| vault_tier            | String | "plus_small"                     | HCP Vault Tier                                   | Yes                                                                                                                                                            |
+| boundary_tier         | String | "PLUS"                           | HCP Boundary Tier                                | Yes                                                                                                                                                            |
+| datadog_api_key       | String | `<hex-api-key>`                | Datadog API Key                                  | Optional, remove `metrics_config` and `audit_log_config` stanzas in  `vault-deploy.tf`. Also remove variable `datadog_api_key` from `variables.tf` |
+| aws_vpc_cidr          | String | "10.0.0.0/16"                    | Class A Must be used                             | Yes                                                                                                                                                            |
+| vault_cluster_id      | String | "hcp-vault-cluster-for-boundary" | HCP Vault Cluster Name                           | Yes                                                                                                                                                            |
+| boundary_cluster_id   | String | "hcp-boundary-cluster"           | HCP Boundary Cluster Name                        | Yes                                                                                                                                                            |
+| db_username           | String | "demo"                           | Username of the master database user             | Yes                                                                                                                                                            |
+| AWS_ACCESS_KEY_ID     | env    |                                  | AWS Access Key                                   | No, you can use UserID                                                                                                                                         |
+| AWS_SECRET_ACCESS_KEY | env    |                                  |                                                  | No, you can use SecretID                                                                                                                                       |
+| AWS_SESSION_TOKEN     | env    |                                  |                                                  | No                                                                                                                                                             |
 
 ## 2. Create Self-Managed Worker, configure RDS and Boundary/Vault
 
@@ -67,15 +75,20 @@ terraform apply -auto-approve
 
 We distinguish 3 level of roles within the DB for which Vault will generate Dynamic Credentials
 
-| Role      | Permissions                                    | Comments                                                                                            |
-| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| dba       | ![1706200145999](image/README/1706200145999.png) | Created via Vault `creation_statements`                                                           |
-| readonly  | ![1706200111560](image/README/1706200111560.png) | Created via Vault creation_statements,<br />which grants to the user created readonly permissions   |
-| readwrite | ![1706200127910](image/README/1706200127910.png) | Created via Vault creation_statements,<br />which grants to the user created readwrite permissions |
+| Role      | Permissions                                    | Comments                                                                                            | Engine   |
+| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------- |
+| dba       | ![1706200145999](image/README/1706200145999.png) | Created via Vault `creation_statements`                                                           | Postgres |
+| readonly  | ![1706200111560](image/README/1706200111560.png) | Created via Vault creation_statements,<br />which grants to the user created readonly permissions   | Postgres |
+| readwrite | ![1706200127910](image/README/1706200127910.png) | Created via Vault creation_statements,<br />which grants to the user created readwrite permissions | Postgres |
+|           |                                                |                                                                                                     | Mongo    |
+|           |                                                |                                                                                                     | Mongo    |
+|           |                                                |                                                                                                     | Mongo    |
 
 After this you will be able to log as admin user on Boundary (CLI, UI or Desktop) and see the target and connect to them
 
 ```bash
+boundary targets list -scope-id $(terraform output -raw project-scope-id) -format json | jq -r 
+or
 boundary targets list -recursive   
 
 Target information:
@@ -100,41 +113,7 @@ Target information:
 
   ID:                    ttcp_fXeQrr2YF4
     Scope ID:            p_SqZeBQkOxT
-    Version:             3
-    Type:                tcp
-    Name:                DBA Access
-    Description:         DBA Target
-    Authorized Actions:
-      authorize-session
-      remove-host-sources
-      add-host-sources
-      set-credential-sources
-      add-credential-sources
-      no-op
-      update
-      delete
-      remove-credential-sources
-      read
-      set-host-sources
-
-  ID:                    ttcp_RNbVgSI4ma
-    Scope ID:            p_SqZeBQkOxT
-    Version:             3
-    Type:                tcp
-    Name:                Read Only Access
-    Description:         Read Only Target
-    Authorized Actions:
-      delete
-      authorize-session
-      set-credential-sources
-      read
-      add-host-sources
-      set-host-sources
-      add-credential-sources
-      no-op
-      update
-      remove-host-sources
-      remove-credential-sources
+   ...
 
 boundary connect postgres -target-id ttcp_5OLRfvrH8w -dbname northwind
 psql (14.9 (Homebrew), server 16.1)
@@ -146,13 +125,18 @@ Type "help" for help.northwind=>
 
 ### 2.1. Inputs
 
-| Variable      | Type   | Example               | Description                                                            | Required |
-| ------------- | ------ | --------------------- | ---------------------------------------------------------------------- | -------- |
-| username      | String | "admin"               | Boundary initial administrative account username                       | Yes      |
-| password      | String | "N0tS0Secr3tPas$w0rd" | Boundary initial administrative account password                       | Yes      |
-| region        | String | "eu-west-2"           | AWS Region                                                             | Yes      |
-| key_pair_name | String | "cert"                | Name of the key pair that will be used to create the EC2 instance      | Yes      |
-| authmethod    | String | "ampw_g7gkG7hioT"     | Boundary Auth Method ID. Introduced as enviromental variable in step 1 | Yes      |
+| Variable          | Type   | Example               | Description                                                            | Required |
+| ----------------- | ------ | --------------------- | ---------------------------------------------------------------------- | -------- |
+| username          | String | "admin"               | Boundary initial administrative account username                       | Yes      |
+| password          | String | "N0tS0Secr3tPas$w0rd" | Boundary initial administrative account password                       | Yes      |
+| region            | String | "eu-west-2"           | AWS Region                                                             | Yes      |
+| key_pair_name     | String | "cert"                | Name of the key pair that will be used to create the EC2 instance      | Yes      |
+| authmethod        | String | "ampw_g7gkG7hioT"     | Boundary Auth Method ID. Introduced as enviromental variable in step 1 | Yes      |
+| db_username       | String | "demo"                | Username of the master database user                                   | Yes      |
+| BOUNDARY_ADDR     | env    |                       | Boundary URL                                                           | Yes      |
+| VAULT_ADDR        | env    |                       | Vault Public URL                                                       | Yes      |
+| VAULT_TOKEN       | env    |                       | Vault admin token                                                      | Yes      |
+| TF_VAR_authmethod | env    |                       | auth method id                                                         | Yes      |
 
 # 3. Mapping IdP (OIDC) Users to targets based on roles
 
@@ -175,13 +159,34 @@ Export those values as enviromental variables and run the code
 export AUTH0_DOMAIN="<domain>"
 export AUTH0_CLIENT_ID="<client-id>" 
 export AUTH0_CLIENT_SECRET="<client_secret>"
-cd ../3_AuthC-AuthZ
+cd ../3_RBAC
 terraform init
 terraform apply -auto-approve
 ```
 
 * We are setting up Boundary to use Auth0 for authentication, defining the proper callback URLs.
-* We are creating 4 users that will be mapped to different roles within Auth0.
+* We are creating 4 users that will be mapped to different roles within Boundary.
+
+You can test it via CLI using the email address of any of the 3 users returned as Terraform output
+
+```bash
+boundary authenticate oidc -auth-method-id $(terraform output -raw auth_method_id)
+boundary targets list -scope-id $(terraform output -raw project-scope-id) -format json | jq -r .
+```
+
+## 3.1. Inputs
+
+| Variable            | Type   | Example               | Description                                                                 | Required |
+| ------------------- | ------ | --------------------- | --------------------------------------------------------------------------- | -------- |
+| username            | String | "admin"               | Boundary initial administrative account username                            | Yes      |
+| password            | String | "N0tS0Secr3tPas$w0rd" | Boundary initial administrative account password                            | Yes      |
+| auth0_password      | String | "N0tS0Secr3tPas$w0rd" | A password that will be associated to every user account we create in Auth0 |          |
+| authmethod          | String | "ampw_g7gkG7hioT"     | Boundary Auth Method ID. Introduced as enviromental variable in step 1      | Yes      |
+| BOUNDARY_ADDR       | env    |                       | Boundary URL                                                                | Yes      |
+| TF_VAR_authmethod   | env    |                       | auth method id                                                              |          |
+| AUTH0_DOMAIN        | env    |                       |                                                                             |          |
+| AUTH0_CLIENT_ID     | env    |                       |                                                                             |          |
+| AUTH0_CLIENT_SECRET | env    |                       |                                                                             |          |
 
 # Clean UP
 
@@ -191,29 +196,4 @@ cd ../2_Config/
 vault lease revoke -force -prefix database && terraform destroy -auto-approve && rm -rf cert.pem
 cd ../1_Platform
 terraform destroy -auto-approve
-```
-
-# Installation in one-go
-
-```bash
-<AWS creds as env>
-<Auth0 creds as env>
-cd 1_Plataform/
-# Initialize TF
-terraform init
-# Requires interactive login to HCP to approve cluster creation
-terraform apply -auto-approve
-export BOUNDARY_ADDR=$(terraform output -json | jq -r .boundary_public_url.value)
-export VAULT_ADDR=$(terraform output -raw vault_public_url)
-export VAULT_NAMESPACE=admin
-export VAULT_TOKEN=$(terraform output -raw vault_token)
-# Log to boundary interactively using password Auth with admin user
-boundary authenticate
-export TF_VAR_authmethod=$(boundary auth-methods list -format json | jq -r '.items[0].id')
-cd ../2_Config/
-terraform init
-terraform apply -auto-approve
-cd ../3_AuthC-AuthZ
-terraform init
-terraform apply -auto-approve
 ```
