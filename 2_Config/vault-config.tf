@@ -58,7 +58,7 @@ resource "vault_database_secret_backend_role" "mongo_dba" {
   name    = "dba"
   db_name = vault_database_secret_backend_connection.mongo.name
   creation_statements = [<<-EOF
-  { "db": "admin",  "roles": [ {"role": "userAdminAnyDatabase"},{"role":"dbAdminAnyDatabase"},{"role":"readWriteAnyDatabase"}]}
+  { "db": "tes",  "roles": [ {"role": "userAdminAnyDatabase"},{"role":"dbAdminAnyDatabase"},{"role":"readWriteAnyDatabase"}]}
   EOF
   ]
   default_ttl = 3600

@@ -586,6 +586,101 @@ northwind=> select * from test;
 (5 rows)
 ```
 
+# DocumentDB DBA
+
+```sql_more
+> mongosh --tls --host 127.0.0.1:50387 --username v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196 --password C209h3O-YeL-CwHQYvaY --tlsAllowInvalidCertificates --retryWrites false
+Current Mongosh Log ID: 65c27c8d14fec5f6b5dedcfc
+Connecting to:          mongodb://<credentials>@127.0.0.1:50387/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
+Using MongoDB:          5.0.0
+Using Mongosh:          2.1.3
+
+For mongosh info see: https://docs.mongodb.com/mongodb-shell/
+rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})
+{
+  authInfo: {
+    authenticatedUsers: [
+      {
+        user: 'v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196',
+        db: 'admin'
+      }
+    ],
+    authenticatedUserRoles: [
+      { role: 'dbAdminAnyDatabase', db: 'admin' },
+      { role: 'readWriteAnyDatabase', db: 'admin' },
+      { role: 'userAdminAnyDatabase', db: 'admin' }
+    ]
+  },
+  ok: 1,
+  operationTime: Timestamp({ t: 1707244136, i: 1 })
+}
+
+rs0 [direct: primary] testdb> use mydatabase
+switched to db mydatabase
+rs0 [direct: primary] mydatabase> 
+
+rs0 [direct: primary] mydatabase> db.createCollection("mycollection")
+{ ok: 1 }
+rs0 [direct: primary] mydatabase> db.mycollection.insertOne({
+...   name: 'John Doe',
+...   age: 30,
+...   city: 'New York'
+... })
+{
+  acknowledged: true,
+  insertedId: ObjectId('65c27da614fec5f6b5dedcff')
+}
+rs0 [direct: primary] mydatabase> db.mycollection.find()
+[
+  {
+    _id: ObjectId('65c27da614fec5f6b5dedcff'),
+    name: 'John Doe',
+    age: 30,
+    city: 'New York'
+  }
+]
+rs0 [direct: primary] mydatabase> db.mycollection.drop()
+true
+rs0 [direct: primary] mydatabase> db.dropDatabase()
+{ ok: 1, dropped: 'mydatabase' }
+rs0 [direct: primary] mydatabase> use test
+switched to db test
+rs0 [direct: primary] test> db.getUsers()
+{
+  ok: 1,
+  users: [
+    {
+      _id: 'serviceadmin',
+      user: 'serviceadmin',
+      db: 'admin',
+      roles: [ { db: 'admin', role: 'root' } ]
+    },
+    {
+      _id: 'demo',
+      user: 'demo',
+      db: 'admin',
+      roles: [ { db: 'admin', role: 'root' } ]
+    },
+    {
+      _id: 'v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196',
+      user: 'v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196',
+      db: 'admin',
+      roles: [
+        { db: 'admin', role: 'userAdminAnyDatabase' },
+        { db: 'admin', role: 'dbAdminAnyDatabase' },
+        { db: 'admin', role: 'readWriteAnyDatabase' }
+      ]
+    }
+  ],
+  operationTime: Timestamp({ t: 1707245099, i: 1 })
+}
+rs0 [direct: primary] test>
+```
+
+# DocumentDB ReadWrite
+
+# DocumentDB ReadOnly
+
 # Clean UP
 
 ```bash
