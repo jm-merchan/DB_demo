@@ -121,9 +121,9 @@ resource "boundary_host_set_static" "db-mongo" {
 }
 
 resource "boundary_target" "dba" {
-  type        = "tcp"
-  name        = "RDS DBA Access"
-  description = "RDS DBA Permissions"
+  type                     = "tcp"
+  name                     = "RDS DBA Access"
+  description              = "RDS DBA Permissions"
   ingress_worker_filter    = " \"worker1\" in \"/tags/type\" "
   scope_id                 = boundary_scope.project.id
   session_connection_limit = 3600
@@ -173,9 +173,9 @@ resource "boundary_target" "write" {
 # DocumentDB Targets
 
 resource "boundary_target" "dba_DocumentDB" {
-  type        = "tcp"
-  name        = "DocumentDB DBA Access"
-  description = "DocumentDB: DBA Permissions"
+  type                     = "tcp"
+  name                     = "DocumentDB DBA Access"
+  description              = "DocumentDB: DBA Permissions"
   ingress_worker_filter    = " \"worker1\" in \"/tags/type\" "
   scope_id                 = boundary_scope.project.id
   session_connection_limit = 3600

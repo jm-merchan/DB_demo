@@ -7,27 +7,27 @@ output "ssh_worker_fqdn" {
 }
 
 output "connect_rds_target_readonly" {
-  value = "boundary connect postgres -target-id ${boundary_target.read_only.id} -dbname northwind" 
+  value = "boundary connect postgres -target-id ${boundary_target.read_only.id} -dbname northwind"
 }
 
 output "connect_rds_target_readwrite" {
-  value = "boundary connect postgres -target-id ${boundary_target.write.id} -dbname northwind"  
+  value = "boundary connect postgres -target-id ${boundary_target.write.id} -dbname northwind"
 }
 
 output "connect_rds_target_dba" {
-  value = "boundary connect postgres -target-id ${boundary_target.dba.id} -dbname northwind" 
+  value = "boundary connect postgres -target-id ${boundary_target.dba.id} -dbname northwind"
 }
 
 output "connect_documentDB_target_readonly" {
-  value = "boundary connect -target-id ${boundary_target.read_only_DocumentDB.id}" 
+  value = "boundary connect -target-id ${boundary_target.read_only_DocumentDB.id}"
 }
 
 output "connect_documentDB_target_readwrite" {
-  value = "boundary connect -target-id ${boundary_target.write_DocumentDB.id}"  
+  value = "boundary connect -target-id ${boundary_target.write_DocumentDB.id}"
 }
 
 output "connect_documentDB_target_dba" {
-  value = "boundary connect -target-id ${boundary_target.dba_DocumentDB.id}" 
+  value = "boundary connect -target-id ${boundary_target.dba_DocumentDB.id}"
 }
 
 # targets only

@@ -1,5 +1,5 @@
 resource "vault_policy" "boundary_controller" {
-  name = "boundary-controller"
+  name   = "boundary-controller"
   policy = file("boundary-controller-policy.hcl")
 }
 
@@ -14,16 +14,16 @@ resource "vault_mount" "database" {
 }
 
 resource "vault_database_secret_backend_connection" "postgres" {
-  backend       = vault_mount.database.path
-  name          = "demo-postgres"
-  allowed_roles = ["*"]
+  backend           = vault_mount.database.path
+  name              = "demo-postgres"
+  allowed_roles     = ["*"]
   verify_connection = false
 
   # Going towards the private IP of the Ubuntu Server
   postgresql {
-    connection_url = "postgresql://{{username}}:{{password}}@${data.terraform_remote_state.local_backend.outputs.rds_hostname}:5432/postgres?sslmode=disable"
-    username       = var.db_username
-    password       = var.password
+    connection_url       = "postgresql://{{username}}:{{password}}@${data.terraform_remote_state.local_backend.outputs.rds_hostname}:5432/${var.db_name}?sslmode=disable"
+    username             = var.db_username
+    password             = var.password
     max_open_connections = 5
   }
 }
@@ -39,9 +39,9 @@ resource "vault_mount" "database_mongo" {
 
 # Define connection as mongodb
 resource "vault_database_secret_backend_connection" "mongo" {
-  backend       = vault_mount.database_mongo.path
-  name          = "demo-mongo"
-  allowed_roles = ["*"]
+  backend           = vault_mount.database_mongo.path
+  name              = "demo-mongo"
+  allowed_roles     = ["*"]
   verify_connection = false
 
   mongodb {
@@ -54,90 +54,80 @@ resource "vault_database_secret_backend_connection" "mongo" {
 
 
 resource "vault_database_secret_backend_role" "mongo_dba" {
-  backend             = vault_mount.database_mongo.path
-  name                = "dba"
-  db_name             = vault_database_secret_backend_connection.mongo.name
-  creation_statements = [ <<-EOF
+  backend = vault_mount.database_mongo.path
+  name    = "dba"
+  db_name = vault_database_secret_backend_connection.mongo.name
+  creation_statements = [<<-EOF
   { "db": "admin",  "roles": [ {"role": "userAdminAnyDatabase"},{"role":"dbAdminAnyDatabase"},{"role":"readWriteAnyDatabase"}]}
   EOF
   ]
   default_ttl = 3600
-  max_ttl = 84000
+  max_ttl     = 84000
 }
 
 resource "vault_database_secret_backend_role" "mongo_readwrite" {
-  backend             = vault_mount.database_mongo.path
-  name                = "read_write"
-  db_name             = vault_database_secret_backend_connection.mongo.name
-  creation_statements = [ <<-EOF
+  backend = vault_mount.database_mongo.path
+  name    = "read_write"
+  db_name = vault_database_secret_backend_connection.mongo.name
+  creation_statements = [<<-EOF
   { "db": "admin",  "roles": [{ "role": "readWriteAnyDatabase" }]}
   EOF
   ]
   default_ttl = 3600
-  max_ttl = 84000
+  max_ttl     = 84000
 }
 
 resource "vault_database_secret_backend_role" "mongo_readonly" {
-  backend             = vault_mount.database_mongo.path
-  name                = "read_only"
-  db_name             = vault_database_secret_backend_connection.mongo.name
-  creation_statements = [ <<-EOF
+  backend = vault_mount.database_mongo.path
+  name    = "read_only"
+  db_name = vault_database_secret_backend_connection.mongo.name
+  creation_statements = [<<-EOF
   { "db": "admin",  "roles": [{ "role": "readAnyDatabase" }]}
   EOF
   ]
   default_ttl = 3600
-  max_ttl = 84000
+  max_ttl     = 84000
 }
 
 resource "vault_database_secret_backend_role" "dba" {
-  backend             = vault_mount.database.path
-  name                = "dba"
-  db_name             = vault_database_secret_backend_connection.postgres.name
+  backend = vault_mount.database.path
+  name    = "dba"
+  db_name = vault_database_secret_backend_connection.postgres.name
   creation_statements = [
     "CREATE USER \"{{name}}\" WITH LOGIN ENCRYPTED PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';",
     "GRANT rds_superuser to \"{{name}}\"",
-    "GRANT CONNECT ON DATABASE northwind TO \"{{name}}\";",
+    "GRANT CONNECT ON DATABASE ${var.db_name} TO \"{{name}}\";",
     "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
-    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";",
-    "ALTER ROLE \"{{name}}\" WITH CREATEDB;"
-    ]
-  revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";", 
-    "DROP OWNED BY \"{{name}}\";",
-    "DROP ROLE \"{{name}}\";"
-    ]
+    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";",   
+    "ALTER ROLE \"{{name}}\" WITH CREATEDB CREATEROLE;",
+  ]
   default_ttl = 3600
 }
 
 resource "vault_database_secret_backend_role" "read_only" {
-  backend             = vault_mount.database.path
-  name                = "readonly"
-  db_name             = vault_database_secret_backend_connection.postgres.name
+  backend = vault_mount.database.path
+  name    = "readonly"
+  db_name = vault_database_secret_backend_connection.postgres.name
   creation_statements = [
     "CREATE USER \"{{name}}\" WITH LOGIN ENCRYPTED PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';",
-    "GRANT readonly TO \"{{name}}\";"
-    ]
-  revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";", 
-    "DROP OWNED BY \"{{name}}\";",
-    "DROP ROLE \"{{name}}\";"
-    ]
+    "GRANT CONNECT ON DATABASE ${var.db_name} TO \"{{name}}\";",
+    "GRANT USAGE ON SCHEMA public TO \"{{name}}\";",
+    "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
+  ]
   default_ttl = 3600
 }
 
 resource "vault_database_secret_backend_role" "write_role" {
-  backend             = vault_mount.database.path
-  name                = "write"
-  db_name             = vault_database_secret_backend_connection.postgres.name
+  backend = vault_mount.database.path
+  name    = "write"
+  db_name = vault_database_secret_backend_connection.postgres.name
   creation_statements = [
     "CREATE USER \"{{name}}\" WITH LOGIN ENCRYPTED PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';",
-    "GRANT readwrite TO \"{{name}}\";",
-    ]
-  revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";", 
-    "DROP OWNED BY \"{{name}}\";",
-    "DROP ROLE \"{{name}}\";"
-    ]
+    "GRANT CONNECT ON DATABASE ${var.db_name} TO \"{{name}}\";",
+    "GRANT USAGE ON SCHEMA public TO \"{{name}}\";",
+    "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
+    "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";"
+  ]
   default_ttl = 1800
 }
 

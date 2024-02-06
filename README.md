@@ -14,6 +14,8 @@ The **Plataform** directory contains:
 * After deploying the infrastructure we set a number of environmental variables that are required for the upcoming deployments.
 * Finally, we authenticate with Boundary using the credentials we have defined within the `terraform.tfvars` file. Vault cluster is configured to send logs to Datadog (simply comment the stanzas to avoid this).
 
+![](https://file.notion.so/f/f/d14f618f-e404-496b-bbcc-f4aa4e0945f7/8cbd2868-8b14-465e-a904-30988998f0f7/Untitled.png?id=4602664b-8a80-40e3-801d-6d5522080ed1&table=block&spaceId=d14f618f-e404-496b-bbcc-f4aa4e0945f7&expirationTimestamp=1707292800000&signature=Imu0zu5PdCivnQhX9no9QELwliHtGSbNuV6JNQtvzD0&downloadName=Untitled.png)
+
 ```bash
 <export AWS Creds>
 cd 1_Plataform/
@@ -71,56 +73,6 @@ Targets are a wrapper of host (host-sets) and permisions (in the form of credent
 cd ../2_Config
 terraform init
 terraform apply -auto-approve
-```
-
-We distinguish 3 level of roles within the DB for which Vault will generate Dynamic Credentials
-
-| Role      | Permissions                                    | Comments                                                                                            | Engine   |
-| --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------- |
-| dba       | ![1706200145999](image/README/1706200145999.png) | Created via Vault `creation_statements`                                                           | Postgres |
-| readonly  | ![1706200111560](image/README/1706200111560.png) | Created via Vault creation_statements,<br />which grants to the user created readonly permissions   | Postgres |
-| readwrite | ![1706200127910](image/README/1706200127910.png) | Created via Vault creation_statements,<br />which grants to the user created readwrite permissions | Postgres |
-|           |                                                |                                                                                                     | Mongo    |
-|           |                                                |                                                                                                     | Mongo    |
-|           |                                                |                                                                                                     | Mongo    |
-
-After this you will be able to log as admin user on Boundary (CLI, UI or Desktop) and see the target and connect to them
-
-```bash
-boundary targets list -scope-id $(terraform output -raw project-scope-id) -format json | jq -r 
-or
-boundary targets list -recursive   
-
-Target information:
-  ID:                    ttcp_5OLRfvrH8w
-    Scope ID:            p_SqZeBQkOxT
-    Version:             3
-    Type:                tcp
-    Name:                Read, Write, Update Tables Access
-    Description:         Read, Write, Update Tables Access
-    Authorized Actions:
-      add-host-sources
-      no-op
-      update
-      delete
-      remove-host-sources
-      set-host-sources
-      add-credential-sources
-      remove-credential-sources
-      authorize-session
-      set-credential-sources
-      read
-
-  ID:                    ttcp_fXeQrr2YF4
-    Scope ID:            p_SqZeBQkOxT
-   ...
-
-boundary connect postgres -target-id ttcp_5OLRfvrH8w -dbname northwind
-psql (14.9 (Homebrew), server 16.1)
-WARNING: psql major version 14, server major version 16.
-Some psql features might not work.
-SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, bits: 256, compression: off)
-Type "help" for help.northwind=>
 ```
 
 ### 2.1. Inputs
@@ -187,6 +139,452 @@ boundary targets list -scope-id $(terraform output -raw project-scope-id) -forma
 | AUTH0_DOMAIN        | env    |                       |                                                                             |          |
 | AUTH0_CLIENT_ID     | env    |                       |                                                                             |          |
 | AUTH0_CLIENT_SECRET | env    |                       |                                                                             |          |
+
+# Workflows
+
+## RDS DBA
+
+```sql
+> export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
+> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=prJEtaNbo....
+
+Authentication information:
+  Account ID:      acctoidc_mhycKeWZdd
+  Auth Method ID:  amoidc_l17XJAoZXb
+  Expiration Time: Tue, 13 Feb 2024 07:48:44 CET
+  User ID:         u_W4zdXRaLQB
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_f6iyFgSkzK
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                RDS DBA Access
+    Description:         RDS DBA Permissions
+    Authorized Actions:
+      authorize-session
+      read
+
+  ID:                    ttcp_1Xky8n4iI8
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB DBA Access
+    Description:         DocumentDB: DBA Permissions
+    Authorized Actions:
+      read
+      authorize-session
+ 
+> boundary connect postgres -target-id ttcp_f6iyFgSkzK -dbname northwind
+psql (14.10 (Homebrew), server 13.13)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+northwind=> \conninfo
+You are connected to database "northwind" as user "v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187" on host "127.0.0.1" at port "57865".
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+
+northwind=> create database dbatest;
+CREATE DATABASE
+
+northwind=> \l
+                                                                        List of databases
+   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                      Access privileges             
+-----------+------------------------------------------------+----------+-------------+-------------+--------------------------------------------------------------
+ dbatest   | v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187 | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ northwind | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | demo=CTc/demo                                               +
+           |                                                |          |             |             | "v-token-to-readonly-HXt20oWkIjJ20qHIfTx2-1707201737"=c/demo+
+           |                                                |          |             |             | "v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187"=c/demo
+ postgres  | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ rdsadmin  | rdsadmin                                       | UTF8     | en_US.UTF-8 | en_US.UTF-8 | rdsadmin=CTc/rdsadmin                                       +
+           |                                                |          |             |             | rdstopmgr=Tc/rdsadmin
+ template0 | rdsadmin                                       | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/rdsadmin                                                 +
+           |                                                |          |             |             | rdsadmin=CTc/rdsadmin
+ template1 | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/demo                                                     +
+           |                                                |          |             |             | demo=CTc/demo
+(6 rows)
+
+northwind=> CREATE ROLE bob;
+CREATE ROLE
+northwind=> \du
+                                                                                 List of roles
+                      Role name                      |                         Attributes                         |                          Member of                
+-----------------------------------------------------+------------------------------------------------------------+-------------------------------------------------------------
+ bob                                                 | Cannot login                                               | {}
+ demo                                                | Create role, Create DB                                    +| {rds_superuser}
+                                                     | Password valid until infinity                              | 
+ rds_ad                                              | Cannot login                                               | {}
+ rds_iam                                             | Cannot login                                               | {}
+ rds_password                                        | Cannot login                                               | {}
+ rds_replication                                     | Cannot login                                               | {}
+ rds_superuser                                       | Cannot login                                               | {pg_monitor,pg_signal_backend,rds_replication,rds_password}
+ rdsadmin                                            | Superuser, Create role, Create DB, Replication, Bypass RLS+| {}
+                                                     | Password valid until infinity                              | 
+ rdsrepladmin                                        | No inheritance, Cannot login, Replication                  | {}
+ rdstopmgr                                           | Password valid until infinity                              | {pg_monitor}
+ v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187      | Create role, Create DB                                    +| {rds_superuser}
+                                                     | Password valid until 2024-02-06 07:49:52+00                | 
+ v-token-to-readonly-HXt20oWkIjJ20qHIfTx2-1707201737 | Password valid until 2024-02-06 07:42:22+00                | {}
+
+northwind=> CREATE TABLE "test" ("fullName" varchar(255), "isUser" varchar(255), "rating" varchar(255));
+INSERT INTO "test" ("fullName", "isUser", "rating")
+
+        VALUES ('Almeda Shields', 'true', '⭐️⭐️'), ('Daniele Upward', 'false', '⭐️⭐️');
+CREATE TABLE
+INSERT 0 2
+northwind=> \dt
+                                    List of relations
+ Schema |          Name          | Type  |                     Owner            
+--------+------------------------+-------+------------------------------------------------
+ public | categories             | table | demo
+ public | customer_customer_demo | table | demo
+ public | customer_demographics  | table | demo
+ public | customers              | table | demo
+ public | employee_territories   | table | demo
+ public | employees              | table | demo
+ public | order_details          | table | demo
+ public | orders                 | table | demo
+ public | products               | table | demo
+ public | region                 | table | demo
+ public | shippers               | table | demo
+ public | suppliers              | table | demo
+ public | territories            | table | demo
+ public | test                   | table | v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187
+ public | us_states              | table | demo
+(15 rows)
+
+northwind=> select * from us_states;
+ state_id |      state_name      | state_abbr | state_region 
+----------+----------------------+------------+--------------
+        1 | Alabama              | AL         | south
+        2 | Alaska               | AK         | north
+        3 | Arizona              | AZ         | west
+        4 | Arkansas             | AR         | south
+        5 | California           | CA         | west
+        6 | Colorado             | CO         | west
+        7 | Connecticut          | CT         | east
+        8 | Delaware             | DE         | east
+        9 | District of Columbia | DC         | east
+       10 | Florida              | FL         | south
+       11 | Georgia              | GA         | south
+       12 | Hawaii               | HI         | west
+       13 | Idaho                | ID         | midwest
+       14 | Illinois             | IL         | midwest
+       15 | Indiana              | IN         | midwest
+       16 | Iowa                 | IO         | midwest
+       17 | Kansas               | KS         | midwest
+       18 | Kentucky             | KY         | south
+       19 | Louisiana            | LA         | south
+       20 | Maine                | ME         | north
+       21 | Maryland             | MD         | east
+       22 | Massachusetts        | MA         | north
+       23 | Michigan             | MI         | north
+       24 | Minnesota            | MN         | north
+       25 | Mississippi          | MS         | south
+       26 | Missouri             | MO         | south
+       27 | Montana              | MT         | west
+       28 | Nebraska             | NE         | midwest
+       29 | Nevada               | NV         | west
+       30 | New Hampshire        | NH         | east
+       31 | New Jersey           | NJ         | east
+       32 | New Mexico           | NM         | west
+       33 | New York             | NY         | east
+       34 | North Carolina       | NC         | east
+       35 | North Dakota         | ND         | midwest
+       36 | Ohio                 | OH         | midwest
+       37 | Oklahoma             | OK         | midwest
+       38 | Oregon               | OR         | west
+       39 | Pennsylvania         | PA         | east
+       40 | Rhode Island         | RI         | east
+       41 | South Carolina       | SC         | east
+       42 | South Dakota         | SD         | midwest
+       43 | Tennessee            | TN         | midwest
+       44 | Texas                | TX         | west
+       45 | Utah                 | UT         | west
+       46 | Vermont              | VT         | east
+       47 | Virginia             | VA         | east
+       48 | Washington           | WA         | west
+       49 | West Virginia        | WV         | south
+       50 | Wisconsin            | WI         | midwest
+       51 | Wyoming              | WY         | west
+(51 rows)
+
+northwind=> select * from test;
+    fullName    | isUser | rating 
+----------------+--------+--------
+ Almeda Shields | true   | ⭐️⭐️
+ Daniele Upward | false  | ⭐️⭐️
+(2 rows)
+```
+
+## RDS ReadWrite
+
+```bash
+> export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
+
+> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb            
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=prJEtaNbo9NqHLf7tjKeDM5GWfmI6amc&max_age=0&nonce=D4Jv2CXeWPDzOIe6ubMv&redirect_uri=https%3A%2F%2F72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=co-...
+
+Authentication information:
+  Account ID:      acctoidc_tVPFQqd66p
+  Auth Method ID:  amoidc_l17XJAoZXb
+  Expiration Time: Tue, 13 Feb 2024 10:54:01 CET
+  User ID:         u_AWdADm7539
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+
+
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_O4XOrZkkm2
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB Read/Write Access
+    Description:         DocumentDB: readWriteAllDBs
+    Authorized Actions:
+      read
+      authorize-session
+
+  ID:                    ttcp_NJQ4NO87QJ
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                RDS Read/Write Access
+    Description:         RDS: SELECT, INSERT, UPDATE, DELETE
+    Authorized Actions:
+      read
+      authorize-session
+
+
+> boundary connect postgres -target-id ttcp_NJQ4NO87QJ -dbname northwind
+psql (14.10 (Homebrew), server 13.13)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+northwind=> \conninfo
+You are connected to database "northwind" as user "v-token-to-write-hcFLGfD40CeKPDpG4dSA-1707213290" on host "127.0.0.1" at port "59908".
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+northwind=> create database dbatest2;
+ERROR:  permission denied to create database
+northwind=> \l
+                                                                       List of databases
+   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                     Access privileges   
+-----------+------------------------------------------------+----------+-------------+-------------+-----------------------------------------------------------
+ dbatest   | v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187 | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ northwind | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | demo=CTc/demo                                            +
+           |                                                |          |             |             | "v-token-to-write-hcFLGfD40CeKPDpG4dSA-1707213290"=c/demo
+ postgres  | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
+ rdsadmin  | rdsadmin                                       | UTF8     | en_US.UTF-8 | en_US.UTF-8 | rdsadmin=CTc/rdsadmin                                    +
+           |                                                |          |             |             | rdstopmgr=Tc/rdsadmin
+ template0 | rdsadmin                                       | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/rdsadmin                                              +
+           |                                                |          |             |             | rdsadmin=CTc/rdsadmin
+ template1 | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =c/demo                                                  +
+           |                                                |          |             |             | demo=CTc/demo
+(6 rows)
+
+northwind=> CREATE TABLE "test2" ("fullName" varchar(255), "isUser" varchar(255), "rating" varchar(255));
+ERROR:  permission denied for schema public
+LINE 1: CREATE TABLE "test2" ("fullName" varchar(255), "isUser" varc...
+                     ^
+northwind=> INSERT INTO "test" ("fullName", "isUser", "rating") VALUES ('Katie Kildea', 'false', '⭐️⭐️'), ('Micah Bonass', 'true', '⭐️⭐️⭐️⭐️'), ('Brigid Whitsey', 'true', '⭐️⭐️');
+INSERT 0 3
+northwind=> select * from us_states;
+ state_id |      state_name      | state_abbr | state_region 
+----------+----------------------+------------+--------------
+        1 | Alabama              | AL         | south
+        2 | Alaska               | AK         | north
+        3 | Arizona              | AZ         | west
+        4 | Arkansas             | AR         | south
+        5 | California           | CA         | west
+        6 | Colorado             | CO         | west
+        7 | Connecticut          | CT         | east
+        8 | Delaware             | DE         | east
+        9 | District of Columbia | DC         | east
+       10 | Florida              | FL         | south
+       11 | Georgia              | GA         | south
+       12 | Hawaii               | HI         | west
+       13 | Idaho                | ID         | midwest
+       14 | Illinois             | IL         | midwest
+       15 | Indiana              | IN         | midwest
+       16 | Iowa                 | IO         | midwest
+       17 | Kansas               | KS         | midwest
+       18 | Kentucky             | KY         | south
+       19 | Louisiana            | LA         | south
+       20 | Maine                | ME         | north
+       21 | Maryland             | MD         | east
+       22 | Massachusetts        | MA         | north
+       23 | Michigan             | MI         | north
+       24 | Minnesota            | MN         | north
+       25 | Mississippi          | MS         | south
+       26 | Missouri             | MO         | south
+       27 | Montana              | MT         | west
+       28 | Nebraska             | NE         | midwest
+       29 | Nevada               | NV         | west
+       30 | New Hampshire        | NH         | east
+       31 | New Jersey           | NJ         | east
+       32 | New Mexico           | NM         | west
+       33 | New York             | NY         | east
+       34 | North Carolina       | NC         | east
+       35 | North Dakota         | ND         | midwest
+       36 | Ohio                 | OH         | midwest
+       37 | Oklahoma             | OK         | midwest
+       38 | Oregon               | OR         | west
+       39 | Pennsylvania         | PA         | east
+       40 | Rhode Island         | RI         | east
+       41 | South Carolina       | SC         | east
+       42 | South Dakota         | SD         | midwest
+       43 | Tennessee            | TN         | midwest
+       44 | Texas                | TX         | west
+       45 | Utah                 | UT         | west
+       46 | Vermont              | VT         | east
+       47 | Virginia             | VA         | east
+       48 | Washington           | WA         | west
+       49 | West Virginia        | WV         | south
+       50 | Wisconsin            | WI         | midwest
+       51 | Wyoming              | WY         | west
+(51 rows)
+
+northwind=> select * from test;
+    fullName    | isUser | rating 
+----------------+--------+--------
+ Almeda Shields | true   | ⭐️⭐️
+ Daniele Upward | false  | ⭐️⭐️
+ Katie Kildea   | false  | ⭐️⭐️
+ Micah Bonass   | true   | ⭐️⭐️⭐️⭐️
+ Brigid Whitsey | true   | ⭐️⭐️
+(5 rows)
+```
+
+## RDS ReadOnly
+
+```bash
+> export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
+
+> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=prJEtaNbo9NqHLf7tjKeDM5GWfmI6amc&max_age=0&nonce=gTGh7INtRzT0G2hPN1WY&redirect_uri=https%3A%...
+
+Authentication information:
+  Account ID:      acctoidc_pAmhCujkNE
+  Auth Method ID:  amoidc_l17XJAoZXb
+  Expiration Time: Tue, 13 Feb 2024 11:11:07 CET
+  User ID:         u_h3xO0X79Og
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_NyckluxxQp
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                RDS ReadOnly Access
+    Description:         RDS: SELECT
+    Authorized Actions:
+      read
+      authorize-session
+
+  ID:                    ttcp_18raqgMmbq
+    Scope ID:            p_MfRkfe58Bd
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB ReadOnly Access
+    Description:         DocumentDB: readAllDBs
+    Authorized Actions:
+      authorize-session
+      read
+
+> boundary connect postgres -target-id ttcp_NyckluxxQp -dbname northwind   
+psql (14.10 (Homebrew), server 13.13)
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+Type "help" for help.
+
+northwind=> \conninfo
+You are connected to database "northwind" as user "v-token-to-readonly-pLqGwK7sOeRJIl35s0JG-1707214382" on host "127.0.0.1" at port "60227".
+SSL connection (protocol: TLSv1.2, cipher: ECDHE-RSA-AES256-GCM-SHA384, bits: 256, compression: off)
+northwind=> CREATE TABLE "test3" ("fullName" varchar(255), "isUser" varchar(255), "rating" varchar(255));
+ERROR:  permission denied for schema public
+LINE 1: CREATE TABLE "test3" ("fullName" varchar(255), "isUser" varc...
+                     ^
+northwind=> INSERT INTO "test" ("fullName", "isUser", "rating") VALUES ('Katie Kildea', 'false', '⭐️⭐️'), ('Micah Bonass', 'true', '⭐️⭐️⭐️⭐️'), ('Brigid Whitsey', 'true', '⭐️⭐️');
+ERROR:  permission denied for table test
+northwind=> select * from us_states;
+ state_id |      state_name      | state_abbr | state_region 
+----------+----------------------+------------+--------------
+        1 | Alabama              | AL         | south
+        2 | Alaska               | AK         | north
+        3 | Arizona              | AZ         | west
+        4 | Arkansas             | AR         | south
+        5 | California           | CA         | west
+        6 | Colorado             | CO         | west
+        7 | Connecticut          | CT         | east
+        8 | Delaware             | DE         | east
+        9 | District of Columbia | DC         | east
+       10 | Florida              | FL         | south
+       11 | Georgia              | GA         | south
+       12 | Hawaii               | HI         | west
+       13 | Idaho                | ID         | midwest
+       14 | Illinois             | IL         | midwest
+       15 | Indiana              | IN         | midwest
+       16 | Iowa                 | IO         | midwest
+       17 | Kansas               | KS         | midwest
+       18 | Kentucky             | KY         | south
+       19 | Louisiana            | LA         | south
+       20 | Maine                | ME         | north
+       21 | Maryland             | MD         | east
+       22 | Massachusetts        | MA         | north
+       23 | Michigan             | MI         | north
+       24 | Minnesota            | MN         | north
+       25 | Mississippi          | MS         | south
+       26 | Missouri             | MO         | south
+       27 | Montana              | MT         | west
+       28 | Nebraska             | NE         | midwest
+       29 | Nevada               | NV         | west
+       30 | New Hampshire        | NH         | east
+       31 | New Jersey           | NJ         | east
+       32 | New Mexico           | NM         | west
+       33 | New York             | NY         | east
+       34 | North Carolina       | NC         | east
+       35 | North Dakota         | ND         | midwest
+       36 | Ohio                 | OH         | midwest
+       37 | Oklahoma             | OK         | midwest
+       38 | Oregon               | OR         | west
+       39 | Pennsylvania         | PA         | east
+       40 | Rhode Island         | RI         | east
+       41 | South Carolina       | SC         | east
+       42 | South Dakota         | SD         | midwest
+       43 | Tennessee            | TN         | midwest
+       44 | Texas                | TX         | west
+       45 | Utah                 | UT         | west
+       46 | Vermont              | VT         | east
+       47 | Virginia             | VA         | east
+       48 | Washington           | WA         | west
+       49 | West Virginia        | WV         | south
+       50 | Wisconsin            | WI         | midwest
+       51 | Wyoming              | WY         | west
+(51 rows)
+
+
+northwind=> select * from test;
+    fullName    | isUser | rating 
+----------------+--------+--------
+ Almeda Shields | true   | ⭐️⭐️
+ Daniele Upward | false  | ⭐️⭐️
+ Katie Kildea   | false  | ⭐️⭐️
+ Micah Bonass   | true   | ⭐️⭐️⭐️⭐️
+ Brigid Whitsey | true   | ⭐️⭐️
+(5 rows)
+```
 
 # Clean UP
 

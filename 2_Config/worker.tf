@@ -104,32 +104,6 @@ WORKER_SERVICE_CONFIG
   }
 WORKER_HCL_CONFIG
 
-
-  postgres_db_config = <<-WORKER_DB_CONFIG
-        begin;
-        -- Revoke privileges from public role
-          REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-          REVOKE ALL ON DATABASE northwind FROM PUBLIC;
-
-        -- Read-only role
-          CREATE ROLE readonly with;
-          GRANT CONNECT ON DATABASE northwind TO readonly;
-          GRANT USAGE ON SCHEMA public TO readonly;
-          GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO readonly;
-
-        -- Read/write role
-          CREATE ROLE readwrite;
-          GRANT CONNECT ON DATABASE northwind TO readwrite;
-          GRANT USAGE, CREATE ON SCHEMA public TO readwrite;
-          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO readwrite;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO readwrite;
-          GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO readwrite;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO readwrite;
-          
-        commit;
-WORKER_DB_CONFIG
-
   cloudinit_config_boundary_worker = {
     write_files = [
       {
@@ -140,10 +114,6 @@ WORKER_DB_CONFIG
       {
         content = local.boundary_worker_hcl_config
         path    = "/etc/boundary.d/pki-worker.hcl"
-      },
-      {
-        content = local.postgres_db_config
-        path = "/tmp/roles.sql"
       }
     ]
   }
@@ -177,10 +147,6 @@ data "cloudinit_config" "boundary_worker" {
     content      = yamlencode(local.cloudinit_config_boundary_worker)
   }
   part {
-    content_type = "text/cloud-config"
-    content      = yamlencode(local.postgres_db_config)
-  }
-  part {
     content_type = "text/x-shellscript"
     content      = <<-EOF
     #!/bin/bash
@@ -190,10 +156,11 @@ data "cloudinit_config" "boundary_worker" {
     cd /tmp
     git clone https://github.com/hashicorp/learn-boundary-vault-quickstart
       
-    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -U demo -d postgres -c "CREATE DATABASE northwind;"
-    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -d northwind -U demo < ./learn-boundary-vault-quickstart/northwind-database.sql --quiet
-    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -d postgres -U demo < /tmp/roles.sql --quiet
-
+    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -U demo -d postgres -c "CREATE DATABASE ${var.db_name};"
+    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -d ${var.db_name} -U demo < ./learn-boundary-vault-quickstart/northwind-database.sql --quiet
+    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -d ${var.db_name} -U demo -c "REVOKE CREATE ON SCHEMA public FROM PUBLIC;"
+    sudo PGPASSWORD=${var.password} psql -h ${data.terraform_remote_state.local_backend.outputs.rds_hostname} -p 5432 -d ${var.db_name} -U demo -c "REVOKE ALL ON DATABASE ${var.db_name} FROM PUBLIC;"   
+    
     EOF
   }
 }

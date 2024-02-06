@@ -6,7 +6,7 @@ variable "password" {
   type = string
 }
 
-variable "db_username"{
+variable "db_username" {
   type = string
 }
 
@@ -22,4 +22,9 @@ variable "key_pair_name" {
 
 variable "authmethod" {
   type = string
+}
+
+variable "db_name" {
+  type = string
+  default = "northwind"
 }

@@ -51,7 +51,7 @@ resource "aws_db_instance" "boundary_demo" {
   instance_class         = "db.t3.micro"
   allocated_storage      = 5
   engine                 = "postgres"
-  engine_version         = "13.7" #"16.1"
+  engine_version         = "13.13" #"16.1"
   username               = var.db_username
   password               = var.password
   db_subnet_group_name   = aws_db_subnet_group.boundary_demo.name
