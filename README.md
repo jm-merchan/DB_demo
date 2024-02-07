@@ -622,10 +622,10 @@ rs0 [direct: primary] mydatabase>
 rs0 [direct: primary] mydatabase> db.createCollection("mycollection")
 { ok: 1 }
 rs0 [direct: primary] mydatabase> db.mycollection.insertOne({
-...   name: 'John Doe',
-...   age: 30,
-...   city: 'New York'
-... })
+   name: 'John Doe',
+   age: 30,
+   city: 'New York'
+})
 {
   acknowledged: true,
   insertedId: ObjectId('65c27da614fec5f6b5dedcff')
@@ -674,12 +674,139 @@ rs0 [direct: primary] test> db.getUsers()
   ],
   operationTime: Timestamp({ t: 1707245099, i: 1 })
 }
-rs0 [direct: primary] test>
 ```
 
 # DocumentDB ReadWrite
 
+```sql_more
+> mongosh --tls --host 127.0.0.1:52066 --username v-token-token-read_write-7fvTfU6B4kUh9acVkilx-1707287236 --password WsQjYJz0AJxql-VSQoX1 --tlsAllowInvalidCertificates --retryWrites false
+Current Mongosh Log ID:	65c322fe6f5259b2e84bf428
+Connecting to:		mongodb://<credentials>@127.0.0.1:52066/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
+Using MongoDB:		5.0.0
+Using Mongosh:		2.1.3
+
+For mongosh info see: https://docs.mongodb.com/mongodb-shell/
+
+
+
+rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})
+{
+  authInfo: {
+    authenticatedUsers: [
+      {
+        user: 'v-token-token-read_write-7fvTfU6B4kUh9acVkilx-1707287236',
+        db: 'admin'
+      }
+    ],
+    authenticatedUserRoles: [ { role: 'readWriteAnyDatabase', db: 'admin' } ]
+  },
+  ok: 1,
+  operationTime: Timestamp({ t: 1707287426, i: 1 })
+}
+rs0 [direct: primary] test> use mydatabase2
+switched to db mydatabase2
+rs0 [direct: primary] mydatabase2> db.createCollection("mycollection2")
+{ ok: 1 }
+rs0 [direct: primary] mydatabase2> db.mycollection2.insertOne({
+    name: 'John Doe',
+    age: 30,
+    city: 'New York'
+})
+{
+  acknowledged: true,
+  insertedId: ObjectId('65c323da6f5259b2e84bf429')
+}
+rs0 [direct: primary] mydatabase2> db.mycollection.find()
+[
+  {
+    _id: ObjectId('65c323da6f5259b2e84bf429'),
+    name: 'John Doe',
+    age: 30,
+    city: 'New York'
+  }
+]
+rs0 [direct: primary] mydatabase2> db.mycollection.drop()
+true
+rs0 [direct: primary] mydatabase2> db.dropDatabase()
+MongoServerError: Authorization failure
+rs0 [direct: primary] mydatabase2> use test
+switched to db test
+rs0 [direct: primary] test> db.getUsers()
+MongoServerError: Authorization failure
+```
+
 # DocumentDB ReadOnly
+
+```sql_more
+> mongosh --tls --host 127.0.0.1:52339 --username v-token-token-read_only-Tpyaf33LpBFFHesRysey-1707287972 --password K2wzFu4Wpn03-eRyhRkh --tlsAllowInvalidCertificates --retryWrites false
+Current Mongosh Log ID:	65c325f2738759ec391a160b
+Connecting to:		mongodb://<credentials>@127.0.0.1:52339/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
+Using MongoDB:		5.0.0
+Using Mongosh:		2.1.3
+
+
+rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})
+{
+  authInfo: {
+    authenticatedUsers: [
+      {
+        user: 'v-token-token-read_only-Tpyaf33LpBFFHesRysey-1707287972',
+        db: 'admin'
+      }
+    ],
+    authenticatedUserRoles: [ { role: 'readAnyDatabase', db: 'admin' } ]
+  },
+  ok: 1,
+  operationTime: Timestamp({ t: 1707288068, i: 1 })
+}
+rs0 [direct: primary] test> use mydatabase3
+switched to db mydatabase3
+rs0 [direct: primary] mydatabase3> db.createCollection("mycollection3")
+MongoServerError: Authorization failure
+rs0 [direct: primary] mydatabase3> use mydatabase2
+switched to db mydatabase2
+rs0 [direct: primary] mydatabase2> db.mycollection.insertOne({
+...     name: 'John Doe',
+...     age: 30,
+...     city: 'New York'
+... })
+MongoServerError: Authorization failure
+
+rs0 [direct: primary] mydatabase2> db.runCommand(
+...    {
+...        listCollections: 1.0,
+...        authorizedCollections: true,
+...        nameOnly: true
+...    }
+... )
+{
+  waitedMS: Long('0'),
+  cursor: {
+    firstBatch: [ { name: 'mycollection2', type: 'collection' } ],
+    id: Long('0'),
+    ns: 'mydatabase2.$cmd.listCollections'
+  },
+  ok: 1,
+  operationTime: Timestamp({ t: 1707288297, i: 1 })
+}
+
+rs0 [direct: primary] mydatabase2> db.mycollection2.find()
+[
+  {
+    _id: ObjectId('65c327e8feed21cc028b8bd7'),
+    name: 'John Doe',
+    age: 30,
+    city: 'New York'
+  }
+]
+rs0 [direct: primary] mydatabase2> db.mycollection2.drop()
+MongoServerError: Authorization failure
+rs0 [direct: primary] mydatabase2> db.dropDatabase()
+MongoServerError: Authorization failure
+rs0 [direct: primary] mydatabase2> db.getUsers()
+MongoServerError: Authorization failure
+rs0 [direct: primary] mydatabase2> exit
+```
 
 # Clean UP
 
