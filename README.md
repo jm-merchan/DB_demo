@@ -586,7 +586,7 @@ northwind=> select * from test;
 (5 rows)
 ```
 
-# DocumentDB DBA
+## DocumentDB DBA
 
 ```sql_more
 > mongosh --tls --host 127.0.0.1:50387 --username v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196 --password C209h3O-YeL-CwHQYvaY --tlsAllowInvalidCertificates --retryWrites false
@@ -676,7 +676,7 @@ rs0 [direct: primary] test> db.getUsers()
 }
 ```
 
-# DocumentDB ReadWrite
+## DocumentDB ReadWrite
 
 ```sql_more
 > mongosh --tls --host 127.0.0.1:52066 --username v-token-token-read_write-7fvTfU6B4kUh9acVkilx-1707287236 --password WsQjYJz0AJxql-VSQoX1 --tlsAllowInvalidCertificates --retryWrites false
@@ -735,7 +735,7 @@ rs0 [direct: primary] test> db.getUsers()
 MongoServerError: Authorization failure
 ```
 
-# DocumentDB ReadOnly
+## DocumentDB ReadOnly
 
 ```sql_more
 > mongosh --tls --host 127.0.0.1:52339 --username v-token-token-read_only-Tpyaf33LpBFFHesRysey-1707287972 --password K2wzFu4Wpn03-eRyhRkh --tlsAllowInvalidCertificates --retryWrites false
@@ -808,7 +808,7 @@ MongoServerError: Authorization failure
 rs0 [direct: primary] mydatabase2> exit
 ```
 
-# Clean UP
+# Clean Up
 
 ```bash
 terraform destroy -auto-approve
