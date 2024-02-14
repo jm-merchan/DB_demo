@@ -20,7 +20,7 @@ resource "aws_internet_gateway" "ig" {
 
 /* Elastic IP for NAT */
 resource "aws_eip" "nat_eip" {
-  domain        = "vpc"
+  domain     = "vpc"
   depends_on = [aws_internet_gateway.ig]
 }
 /* NAT */
@@ -29,7 +29,7 @@ resource "aws_nat_gateway" "nat" {
   subnet_id     = aws_subnet.public1.id
   depends_on    = [aws_internet_gateway.ig]
   tags = {
-    Name        = "nat"
+    Name = "nat"
   }
 }
 
@@ -101,7 +101,7 @@ resource "aws_route_table" "rt-private" {
   vpc_id = aws_vpc.vpc.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 
@@ -189,9 +189,9 @@ resource "aws_security_group" "privatesg" {
   }
   # Mongo
   ingress {
-    from_port       = 27017
-    to_port         = 27018
-    protocol        = "tcp"
+    from_port   = 27017
+    to_port     = 27018
+    protocol    = "tcp"
     cidr_blocks = [var.aws_vpc_cidr, var.hvn_cidr]
   }
   egress {

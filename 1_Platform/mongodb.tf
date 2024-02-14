@@ -17,7 +17,7 @@ resource "aws_docdb_cluster" "docdb" {
   skip_final_snapshot     = true
   vpc_security_group_ids  = [aws_security_group.privatesg.id]
   db_subnet_group_name    = aws_docdb_subnet_group.docdb_subnet_group.name
-  port = 27017
+  port                    = 27017
 }
 
 resource "aws_docdb_cluster_instance" "docdb_node" {
@@ -26,6 +26,6 @@ resource "aws_docdb_cluster_instance" "docdb_node" {
   cluster_identifier = aws_docdb_cluster.docdb.id
   instance_class     = "db.t3.medium"
   tags = {
-    name         = format("%s_docdb_node_%d", "DocumentDB", count.index)
+    name = format("%s_docdb_node_%d", "DocumentDB", count.index)
   }
 }

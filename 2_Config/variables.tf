@@ -25,6 +25,6 @@ variable "authmethod" {
 }
 
 variable "db_name" {
-  type = string
+  type    = string
   default = "northwind"
 }

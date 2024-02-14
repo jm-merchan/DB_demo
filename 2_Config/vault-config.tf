@@ -98,10 +98,17 @@ resource "vault_database_secret_backend_role" "dba" {
     "GRANT rds_superuser to \"{{name}}\"",
     "GRANT CONNECT ON DATABASE ${var.db_name} TO \"{{name}}\";",
     "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
-    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";",   
+    "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";",
     "ALTER ROLE \"{{name}}\" WITH CREATEDB CREATEROLE;",
   ]
+  revocation_statements = [
+    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "DROP ROLE IF EXISTS \"{{name}}\";"
+  ]
   default_ttl = 3600
+  max_ttl     = 84000
 }
 
 resource "vault_database_secret_backend_role" "read_only" {
@@ -114,7 +121,14 @@ resource "vault_database_secret_backend_role" "read_only" {
     "GRANT USAGE ON SCHEMA public TO \"{{name}}\";",
     "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
   ]
+  revocation_statements = [
+    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "DROP ROLE IF EXISTS \"{{name}}\";"
+  ]
   default_ttl = 3600
+  max_ttl     = 84000
 }
 
 resource "vault_database_secret_backend_role" "write_role" {
@@ -128,7 +142,14 @@ resource "vault_database_secret_backend_role" "write_role" {
     "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
     "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";"
   ]
+  revocation_statements = [
+    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "DROP ROLE IF EXISTS \"{{name}}\";"
+  ]
   default_ttl = 1800
+  max_ttl     = 84000
 }
 
 
