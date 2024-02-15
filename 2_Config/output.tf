@@ -19,15 +19,27 @@ output "connect_rds_target_dba" {
 }
 
 output "connect_documentDB_target_readonly" {
-  value = "boundary connect -target-id ${boundary_target.read_only_DocumentDB.id}"
+  value = <<-EOF
+  eval "$(boundary targets authorize-session -id ${boundary_target.read_only_DocumentDB.id} -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')"
+  boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
+  
+  EOF
 }
 
 output "connect_documentDB_target_readwrite" {
-  value = "boundary connect -target-id ${boundary_target.write_DocumentDB.id}"
+  value = <<-EOF
+  eval "$(boundary targets authorize-session -id ${boundary_target.write_DocumentDB.id} -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')"
+  boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
+  
+  EOF
 }
 
 output "connect_documentDB_target_dba" {
-  value = "boundary connect -target-id ${boundary_target.dba_DocumentDB.id}"
+  value = <<-EOF
+  eval "$(boundary targets authorize-session -id ${boundary_target.dba_DocumentDB.id} -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')"
+  boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
+  
+  EOF
 }
 
 # targets only

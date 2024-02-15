@@ -49,6 +49,8 @@ resource "vault_database_secret_backend_connection" "mongo" {
     username       = var.db_username
     password       = var.password
     # Manually add this cert https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem as CA
+    # wget https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+    # vault write /mongo/config/demo-mongo tls_ca=@global-bundle.pem 
   }
 }
 
@@ -58,7 +60,7 @@ resource "vault_database_secret_backend_role" "mongo_dba" {
   name    = "dba"
   db_name = vault_database_secret_backend_connection.mongo.name
   creation_statements = [<<-EOF
-  { "db": "tes",  "roles": [ {"role": "userAdminAnyDatabase"},{"role":"dbAdminAnyDatabase"},{"role":"readWriteAnyDatabase"}]}
+  { "db": "admin",  "roles": [ {"role": "userAdminAnyDatabase"},{"role":"dbAdminAnyDatabase"},{"role":"readWriteAnyDatabase"}]}
   EOF
   ]
   default_ttl = 3600
@@ -102,9 +104,13 @@ resource "vault_database_secret_backend_role" "dba" {
     "ALTER ROLE \"{{name}}\" WITH CREATEDB CREATEROLE;",
   ]
   revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "GRANT \"{{name}}\" to \"${var.db_username}\";",
+    "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL ON DATABASE ${var.db_name} FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "REASSIGN OWNED BY \"{{name}}\" to \"${var.db_username}\";",
+    "DROP OWNED BY \"{{name}}\";",
     "DROP ROLE IF EXISTS \"{{name}}\";"
   ]
   default_ttl = 3600
@@ -122,9 +128,13 @@ resource "vault_database_secret_backend_role" "read_only" {
     "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";",
   ]
   revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "GRANT \"{{name}}\" to \"${var.db_username}\";",
+    "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL ON DATABASE ${var.db_name} FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "REASSIGN OWNED BY \"{{name}}\" to \"${var.db_username}\";",
+    "DROP OWNED BY \"{{name}}\";",
     "DROP ROLE IF EXISTS \"{{name}}\";"
   ]
   default_ttl = 3600
@@ -143,9 +153,13 @@ resource "vault_database_secret_backend_role" "write_role" {
     "GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";"
   ]
   revocation_statements = [
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "GRANT \"{{name}}\" to \"${var.db_username}\";",
+    "REVOKE ALL ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
+    "REVOKE ALL ON DATABASE ${var.db_name} FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\";",
     "REVOKE ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public FROM \"{{name}}\";",
+    "REASSIGN OWNED BY \"{{name}}\" to \"${var.db_username}\";",
+    "DROP OWNED BY \"{{name}}\";",
     "DROP ROLE IF EXISTS \"{{name}}\";"
   ]
   default_ttl = 1800

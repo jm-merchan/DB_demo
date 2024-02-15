@@ -14,10 +14,9 @@ The **Plataform** directory contains:
 * After deploying the infrastructure we set a number of environmental variables that are required for the upcoming deployments.
 * Finally, we authenticate with Boundary using the credentials we have defined within the `terraform.tfvars` file. Vault cluster is configured to send logs to Datadog (simply comment the stanzas to avoid this).
 
-![](https://file.notion.so/f/f/d14f618f-e404-496b-bbcc-f4aa4e0945f7/8cbd2868-8b14-465e-a904-30988998f0f7/Untitled.png?id=4602664b-8a80-40e3-801d-6d5522080ed1&table=block&spaceId=d14f618f-e404-496b-bbcc-f4aa4e0945f7&expirationTimestamp=1707292800000&signature=Imu0zu5PdCivnQhX9no9QELwliHtGSbNuV6JNQtvzD0&downloadName=Untitled.png)
-
 ```bash
 <export AWS Creds>
+<export HCP Creds or interactive login during apply>
 cd 1_Plataform/
 # Initialize TF
 terraform init
@@ -50,6 +49,20 @@ export TF_VAR_authmethod=$(boundary auth-methods list -format json | jq -r '.ite
 | AWS_ACCESS_KEY_ID     | env    |                                  | AWS Access Key                                   | No, you can use UserID                                                                                                                                         |
 | AWS_SECRET_ACCESS_KEY | env    |                                  |                                                  | No, you can use SecretID                                                                                                                                       |
 | AWS_SESSION_TOKEN     | env    |                                  |                                                  | No                                                                                                                                                             |
+
+### 1.2 Outputs
+
+| Variable               | Type   | Description                       | Example                                                                                                                    |
+| ---------------------- | ------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| boundary_public_url    | String | HCP Boundary URL                  | boundary_public_url = "https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud"                              |
+| docdb_cluster_endpoint | String | DocumentDB FQDN                   | docdb_cluster_endpoint = "docdb-cluster.cluster-cqxy3m8bffq6.eu-west-2.docdb.amazonaws.com"                                |
+| peering_id             | String | HCP peering id                    | peering_id = "pcx-00b430b2a631dbb85"                                                                                       |
+| rds_hostname           | String | PostgresSQL FQDN                  | rds_hostname = "boundarydemo.cqxy3m8bffq6.eu-west-2.rds.amazonaws.com"                                                     |
+| vault_private_url      | String | Vault private endpoint FQDN (API) | vault_private_url = "https://hcp-vault-cluster-for-boundary-private-vault-4ef8978f.1bdf4150.z1.hashicorp.cloud:8200"       |
+| vault_proxy_endpoint   | String | Vault FQDN for UI access          | vault_proxy_endpoint = "https://hcp-vault-cluster-for-boundary-http-vault-d22512ab.j.cloud.hashicorp.com"                  |
+| vault_public_url       | String | Vault public endpoint FQDN (API)  | vault_public_url = "https://hcp-vault-cluster-for-boundary-public-vault-4ef8978f.1bdf4150.z1.hashicorp.cloud:8200"         |
+| vault_token            | String | Vault administrative token        | vault_token = "hvs.CAESII1E2spw7s563IIkV8sD7_NQ0CnEJ1CkKfi-zhq24Xt9GiYKImh2cy52TXdYSFpaSFFpNmpBWmZWSmRBYjFiT2gubHNPRkYQeQ" |
+| vpc                    | String | VPC id                            | vpc = "vpc-026c5921344de499e"                                                                                              |
 
 ## 2. Create Self-Managed Worker, configure RDS and Boundary/Vault
 
@@ -90,7 +103,26 @@ terraform apply -auto-approve
 | VAULT_TOKEN       | env    |                       | Vault admin token                                                      | Yes      |
 | TF_VAR_authmethod | env    |                       | auth method id                                                         | Yes      |
 
-# 3. Mapping IdP (OIDC) Users to targets based on roles
+### 2.2 Outputs
+
+| Variable                            | Type   | Description                                                  | Example                                                                |
+| ----------------------------------- | ------ | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| connect_documentDB_target_dba       | String | Commands to connect to DocumentDB DBA target                 | terraform output -raw connect_documentDB_target_readonly              |
+| connect_documentDB_target_readonly  | String | Commands to connect to DocumentDB readonly target            | terraform output -raw connect_documentDB_target_readonly              |
+| connect_documentDB_target_readwrite | String | Commands to connect to DocumentDB readwrite target          | terraform output -raw connect_documentDB_target_readonly              |
+| connect_rds_target_dba              | String | Command to connect to RDS DBA target                         | boundary connect postgres -target-id ttcp_UflbyKyPWb -dbname northwind |
+| connect_rds_target_readonly         | String | Command to connect to RDS readonly target                    | boundary connect postgres -target-id ttcp_y5a14LzaOT -dbname northwind |
+| connect_rds_target_readwrite        | String | Command to connect to RDS readwrite target                   | boundary connect postgres -target-id ttcp_ezWrfC1F8h -dbname northwind |
+| documentDB_target_dba               | String | DocumentDB DBA Target ID                                     | ttcp_5KF7b2nemT                                                        |
+| documentDB_target_readonly          | String | DocumentDB ReadOnly Target ID                                | ttcp_cmdRTvMpOX                                                        |
+| documentDB_target_readwrite         | String | DocumentDB ReadWrite Target ID                               | ttcp_AV0272rFCb                                                        |
+| rds_target_dba                      | String | RDS DBA Target ID                                            | ttcp_UflbyKyPWb                                                        |
+| rds_target_readonly                 | String | RDS ReadOnly Target ID                                       | ttcp_y5a14LzaOT                                                        |
+| rds_target_readwrite                | String | RDS ReadWrite Target ID                                      | ttcp_ezWrfC1F8h                                                        |
+| ssh_worker_fqdn                     | String | Command to connect to Boundary Worker via SSH (ec2 instance) | ssh -i cert.pem ubuntu@ec2-35-177-0-38.eu-west-2.compute.amazonaws.com |
+| worker_fqdn                         | String | Boundary Worker Public FQDN (ec2 instance)                   | ec2-35-177-0-38.eu-west-2.compute.amazonaws.com                        |
+
+## 3. Mapping IdP (OIDC) Users to targets based on roles
 
 In this step we are going to leverage Auth0 dev account to build an OIDC integration between Auth0 and Boundary. The first task will be to create an Application with access to Auth0 MGMT API:
 
@@ -126,7 +158,7 @@ boundary authenticate oidc -auth-method-id $(terraform output -raw auth_method_i
 boundary targets list -scope-id $(terraform output -raw project-scope-id) -format json | jq -r .
 ```
 
-## 3.1. Inputs
+### 3.1. Inputs
 
 | Variable            | Type   | Example               | Description                                                                 | Required |
 | ------------------- | ------ | --------------------- | --------------------------------------------------------------------------- | -------- |
@@ -139,6 +171,18 @@ boundary targets list -scope-id $(terraform output -raw project-scope-id) -forma
 | AUTH0_DOMAIN        | env    |                       |                                                                             |          |
 | AUTH0_CLIENT_ID     | env    |                       |                                                                             |          |
 | AUTH0_CLIENT_SECRET | env    |                       |                                                                             |          |
+
+### 3.2 Outputs
+
+| Variable                  | Type   | Description                                            | Example                                                      |
+| ------------------------- | ------ | ------------------------------------------------------ | ------------------------------------------------------------ |
+| auth_method_id            | String | OIDC Auth Method ID                                    | amoidc_kFalRmMWZw                                            |
+| boundary_authenticate_cli | String | Command to authenticate to boundary via Auth0          | boundary authenticate oidc -auth-method-id amoidc_kFalRmMWZw |
+| password                  | String | Password for all users created                         | Passw0rd123!                                                 |
+| project-scope-id          | String | Project ID scope where all resources have been created | p_3qnPearCT1                                                 |
+| user_dba_email            | String | Email address for DBA user                             | dba@boundaryproject.io                                       |
+| user_readonly_email       | String | Email address for ReadOnly user                        | readonly@boundaryproject.io                                  |
+| user_readwrite_email      | String | Email address for ReadWrite user                       | readwrite@boundaryproject.io                                 |
 
 # Workflows
 
@@ -195,7 +239,7 @@ CREATE DATABASE
 
 northwind=> \l
                                                                         List of databases
-   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                      Access privileges           
+   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                      Access privileges     
 -----------+------------------------------------------------+----------+-------------+-------------+--------------------------------------------------------------
  dbatest   | v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187 | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
  northwind | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | demo=CTc/demo                                               +
@@ -214,7 +258,7 @@ northwind=> CREATE ROLE bob;
 CREATE ROLE
 northwind=> \du
                                                                                  List of roles
-                      Role name                      |                         Attributes                         |                          Member of              
+                      Role name                      |                         Attributes                         |                          Member of        
 -----------------------------------------------------+------------------------------------------------------------+-------------------------------------------------------------
  bob                                                 | Cannot login                                               | {}
  demo                                                | Create role, Create DB                                    +| {rds_superuser}
@@ -240,7 +284,7 @@ CREATE TABLE
 INSERT 0 2
 northwind=> \dt
                                     List of relations
- Schema |          Name          | Type  |                     Owner          
+ Schema |          Name          | Type  |                     Owner    
 --------+------------------------+-------+------------------------------------------------
  public | categories             | table | demo
  public | customer_customer_demo | table | demo
@@ -328,7 +372,7 @@ northwind=> select * from test;
 ```bash
 > export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
 
-> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb          
+> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb    
 Opening returned authentication URL in your browser...
 https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=prJEtaNbo9NqHLf7tjKeDM5GWfmI6amc&max_age=0&nonce=D4Jv2CXeWPDzOIe6ubMv&redirect_uri=https%3A%2F%2F72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=co-...
 
@@ -589,13 +633,60 @@ northwind=> select * from test;
 ## DocumentDB DBA
 
 ```sql_more
-> mongosh --tls --host 127.0.0.1:50387 --username v-token-token-dba-9NB04Eptj9j8J2z2UeJZ-1707244196 --password C209h3O-YeL-CwHQYvaY --tlsAllowInvalidCertificates --retryWrites false
-Current Mongosh Log ID: 65c27c8d14fec5f6b5dedcfc
-Connecting to:          mongodb://<credentials>@127.0.0.1:50387/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
-Using MongoDB:          5.0.0
-Using Mongosh:          2.1.3
+> export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
+> boundary authenticate oidc -auth-method-id amoidc_kFalRmMWZw
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=OHgDoLbq0K4H71o51CumJ2QtpYi6asF6&max_age=0&nonce=CV3vDQ7FIDJZPdCHRBMw&redirect_uri=https%3A%2F%2F7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=code&scope=openid&state=NFSM7Lhse1G7kKVVzF3UHanpwUraXzyc367zZrMRr3K3jmAv5oQinNXkBZvDiC8H1wCBWkuk1Ekw8LjF3drJB9gbg8ZQpTqixQMAfsLfGQuz63ETR1qSFcH6PRMqfA1iDLnaSbDyzQVR4WpRc7g4EoMet1Di41QSeMwYknKfUzD9upicPJkUkMHCEFrnR5c6eUvqEEwVMJ2ph1NTAV7jfTMnxMrwuUYWVXUgSeNc4LjBKmxGsHwMujizBJ7e1EXeY9L14FsuBWYu9B8JPEwyEHpz3rPnvkgL1cVAsZLLbMSSiDzwM1gGBJFyqpjG5bBDCMCPDyaXBwHf7eLu26ctRGS38Pc8XeYesGBVNnfEXjMJfcoZXB5fjLLGR53yapBBADguegYu2P9bXzzRJCqvUtpyyQQ1iPDW6XMoExmNTypDvyjPc9CLjW1eFUPQjQpkTtBg
+
+Authentication information:
+  Account ID:      acctoidc_0eWZg22j0a
+  Auth Method ID:  amoidc_kFalRmMWZw
+  Expiration Time: Thu, 22 Feb 2024 09:06:10 CET
+  User ID:         u_3x6ierNAGn
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_5KF7b2nemT
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB DBA Access
+    Description:         DocumentDB: DBA Permissions
+    Authorized Actions:
+      authorize-session
+      read
+
+  ID:                    ttcp_UflbyKyPWb
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                RDS DBA Access
+    Description:         RDS DBA Permissions
+    Authorized Actions:
+      read
+      authorize-session
+
+eval "$(boundary targets authorize-session -id ttcp_5KF7b2nemT -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')
+> boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
+
+Proxy listening information:
+  Address:             127.0.0.1
+  Connection Limit:    3600
+  Expiration:          Thu, 15 Feb 2024 17:11:05 CET
+  Port:                58558
+  Protocol:            tcp
+  Session ID:          s_PK2t9h2KN5
+Current Mongosh Log ID:	65cdc7297b18a74a9f2010b1
+Connecting to:		mongodb://<credentials>@127.0.0.1:58558/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
+Using MongoDB:		5.0.0
+Using Mongosh:		2.1.3
+mongosh 2.1.4 is available for download: https://www.mongodb.com/try/download/shell
 
 For mongosh info see: https://docs.mongodb.com/mongodb-shell/
+
 rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})
 {
   authInfo: {
@@ -679,15 +770,58 @@ rs0 [direct: primary] test> db.getUsers()
 ## DocumentDB ReadWrite
 
 ```sql_more
-> mongosh --tls --host 127.0.0.1:52066 --username v-token-token-read_write-7fvTfU6B4kUh9acVkilx-1707287236 --password WsQjYJz0AJxql-VSQoX1 --tlsAllowInvalidCertificates --retryWrites false
-Current Mongosh Log ID:	65c322fe6f5259b2e84bf428
-Connecting to:		mongodb://<credentials>@127.0.0.1:52066/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
+> export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
+> boundary authenticate oidc -auth-method-id amoidc_kFalRmMWZw
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=OHgDoLbq0K4H71o51CumJ2QtpYi6asF6&max_age=0&nonce=7OSh6XM77W0r052Aomoa&redirect_uri=https%3A%2F%2F7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=code&scope=openid&state=NFSM7Lhse1G7kKVVzF3UHanpwUraXzyc367zZrMRr3K3jmAv5oQinNXkBZvDiC8H1wCBWkuk1Ekw8LjF3drJB9gbg8ZQpTqixQMAfsLfGQuz63ETR1qSFcH6KoQVkuiWLpHytjpw6a9pBUj2AH94qkv2R3tHVsS8faPTccBvbZheZHPc2kvYpQpahd5kiUz2DYSrHfBSGkNDfg3WD7sBqx1ab8riLDzviA8Pa7HxgzN8d12BEM6YX6CQuq6oxQfBXdyb1D9MAdokuFaod1R6UdivBVNRSNaGaKtpfwzJ7ZRJMuT9zCChyjNzV6JU9yko6ERXaKpqY9DVk2KAY5oxCWAgWza4LWk59XYav5LzBQdrC8gLTFUJzLTd9eMSX2f2n4qBcC6GgYZ7z97FpdR6w3y3WiHWKznvinkLTLj9BTBJwHm9fG6UFbjKScp5LK8KbM98
+
+Authentication information:
+  Account ID:      acctoidc_gfwbHESwrq
+  Auth Method ID:  amoidc_kFalRmMWZw
+  Expiration Time: Thu, 22 Feb 2024 09:32:53 CET
+  User ID:         u_5WmplVDem2
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_ezWrfC1F8h
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                RDS Read/Write Access
+    Description:         RDS: SELECT, INSERT, UPDATE, DELETE
+    Authorized Actions:
+      read
+      authorize-session
+
+  ID:                    ttcp_AV0272rFCb
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB Read/Write Access
+    Description:         DocumentDB: readWriteAllDBs
+    Authorized Actions:
+      authorize-session
+      read
+
+> eval "$(boundary targets authorize-session -id ttcp_AV0272rFCb -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')"
+boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
+
+Proxy listening information:
+  Address:             127.0.0.1
+  Connection Limit:    3600
+  Expiration:          Thu, 15 Feb 2024 17:33:58 CET
+  Port:                58931
+  Protocol:            tcp
+  Session ID:          s_VJlsI25TKo
+Current Mongosh Log ID:	65cdcc770e4edc0a8dd1ddb7
+Connecting to:		mongodb://<credentials>@127.0.0.1:58931/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
 Using MongoDB:		5.0.0
 Using Mongosh:		2.1.3
+mongosh 2.1.4 is available for download: https://www.mongodb.com/try/download/shell
 
 For mongosh info see: https://docs.mongodb.com/mongodb-shell/
-
-
 
 rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})
 {
@@ -738,11 +872,44 @@ MongoServerError: Authorization failure
 ## DocumentDB ReadOnly
 
 ```sql_more
-> mongosh --tls --host 127.0.0.1:52339 --username v-token-token-read_only-Tpyaf33LpBFFHesRysey-1707287972 --password K2wzFu4Wpn03-eRyhRkh --tlsAllowInvalidCertificates --retryWrites false
-Current Mongosh Log ID:	65c325f2738759ec391a160b
-Connecting to:		mongodb://<credentials>@127.0.0.1:52339/?directConnection=true&serverSelectionTimeoutMS=2000&tls=true&tlsAllowInvalidCertificates=true&retryWrites=false&appName=mongosh+2.1.3
-Using MongoDB:		5.0.0
-Using Mongosh:		2.1.3
+> export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
+> boundary authenticate oidc -auth-method-id amoidc_kFalRmMWZw
+Opening returned authentication URL in your browser...
+https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=OHgDoLbq0K4H71o51CumJ2QtpYi6asF6&max_age=0&nonce=Ir8lkiMGnYvH8qdAxQ3G&redirect_uri=https%3A%2F%2F7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=code&scope=openid&state=NFSM7Lhse1G7kKVVzF3UHanpwUraXzyc367zZrMRr3K3jmAv5oQinNXkBZvDiC8H1wCBWkuk1Ekw8LjF3drJB9gbg8ZQpTqixQMAfsLfGQuz63ETR1qSFcH6Y5bB6kipx2DGf2YSwARq3moiPKMpHLCTb8xaV3D4GCS1bETL6rKBY65Zdk6HcKvpEccpGF4V2jTQY5RFVSTTattGPEvuy1nDkaqnYFufj67VYgbCXLTo5JQhBcTVeeo5msrL4UAHiyNp4rGbqNLuU4UyaF6LGLYvUYbDxBmb9JmEod1gjgv3T6QVV35PmusXyhYWjZ1UJSHyyEhjETDrwpgXCcokghSYEb2VBuW1LbFjXTgCy9gdazkC2kYMdSCLGTD5z9V4TdrgCUhk9tkYCaHtABFb9mAmNV7f9vgf4xV1a5C4ipVvr7rKDeBawRc9wHYcfCfhBGDL
+
+Authentication information:
+  Account ID:      acctoidc_dXQcGlVZXS
+  Auth Method ID:  amoidc_kFalRmMWZw
+  Expiration Time: Thu, 22 Feb 2024 09:36:11 CET
+  User ID:         u_X93PKT600F
+
+The token name "default" was successfully stored in the chosen keyring and is not displayed here.
+
+> boundary targets list -recursive
+
+Target information:
+  ID:                    ttcp_cmdRTvMpOX
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                DocumentDB ReadOnly Access
+    Description:         DocumentDB: readAllDBs
+    Authorized Actions:
+      read
+      authorize-session
+
+  ID:                    ttcp_y5a14LzaOT
+    Scope ID:            p_3qnPearCT1
+    Version:             3
+    Type:                tcp
+    Name:                RDS ReadOnly Access
+    Description:         RDS: SELECT
+    Authorized Actions:
+      read
+      authorize-session
+
+> eval "$(boundary targets authorize-session -id ttcp_cmdRTvMpOX -format json | jq -r '.item | "export BOUNDARY_SESSION_TOKEN=\(.authorization_token) BOUNDARY_SESSION_USERNAME=\(.credentials[0].secret.decoded.username) BOUNDARY_SESSION_PASSWORD=\(.credentials[0].secret.decoded.password)"')"
+boundary connect -exec mongosh -authz-token=$BOUNDARY_SESSION_TOKEN --  --tls --host {{boundary.addr}} --username $BOUNDARY_SESSION_USERNAME --password $BOUNDARY_SESSION_PASSWORD --tlsAllowInvalidCertificates --retryWrites false
 
 
 rs0 [direct: primary] test> db.runCommand({connectionStatus : 1})

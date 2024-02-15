@@ -1,0 +1,6 @@
+username      = "admin"
+password      = "SuperSecret123!"
+key_pair_name = "cert"
+region        = "eu-west-2"
+db_username   = "demo"
+
