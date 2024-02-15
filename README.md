@@ -186,9 +186,9 @@ boundary targets list -scope-id $(terraform output -raw project-scope-id) -forma
 | user_readonly_email       | String | Email address for ReadOnly user                        | readonly@boundaryproject.io                                  |
 | user_readwrite_email      | String | Email address for ReadWrite user                       | readwrite@boundaryproject.io                                 |
 
-# Workflows
+## 4. Workflows
 
-## RDS DBA
+### 4.1. RDS DBA
 
 ```sql
 > export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
@@ -369,7 +369,7 @@ northwind=> select * from test;
 (2 rows)
 ```
 
-## RDS ReadWrite
+### 4.2. RDS ReadWrite
 
 ```bash
 > export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
@@ -510,7 +510,7 @@ northwind=> select * from test;
 (5 rows)
 ```
 
-## RDS ReadOnly
+### 4.3. RDS ReadOnly
 
 ```bash
 > export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
@@ -632,7 +632,7 @@ northwind=> select * from test;
 (5 rows)
 ```
 
-## DocumentDB DBA
+### 4.4. DocumentDB DBA
 
 ```sql_more
 > export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
@@ -769,7 +769,7 @@ rs0 [direct: primary] test> db.getUsers()
 }
 ```
 
-## DocumentDB ReadWrite
+### 4.5. DocumentDB ReadWrite
 
 ```sql_more
 > export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
@@ -871,7 +871,7 @@ rs0 [direct: primary] test> db.getUsers()
 MongoServerError: Authorization failure
 ```
 
-## DocumentDB ReadOnly
+### 4.6. DocumentDB ReadOnly
 
 ```sql_more
 > export BOUNDARY_ADDR=https://7d018f9c-ee36-4ac4-90b6-10b465770d5c.boundary.hashicorp.cloud
@@ -977,7 +977,7 @@ MongoServerError: Authorization failure
 rs0 [direct: primary] mydatabase2> exit
 ```
 
-# Clean Up
+## 5. Clean Up
 
 ```bash
 terraform destroy -auto-approve
