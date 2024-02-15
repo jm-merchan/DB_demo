@@ -3,6 +3,8 @@
 #### Prerequisites
 
 * Terraform, Vault and Boundary CLI installed on your environment.
+* psql client
+* mongosh client
 
 ## 1. Building Vault and Boundary clusters in HCP and Database (RDS and DocumentDB) instances
 
@@ -239,7 +241,7 @@ CREATE DATABASE
 
 northwind=> \l
                                                                         List of databases
-   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                      Access privileges     
+   Name    |                     Owner                      | Encoding |   Collate   |    Ctype    |                      Access privileges   
 -----------+------------------------------------------------+----------+-------------+-------------+--------------------------------------------------------------
  dbatest   | v-token-to-dba-wNVIPCDSDa1RNUeLajDv-1707202187 | UTF8     | en_US.UTF-8 | en_US.UTF-8 | 
  northwind | demo                                           | UTF8     | en_US.UTF-8 | en_US.UTF-8 | demo=CTc/demo                                               +
@@ -258,7 +260,7 @@ northwind=> CREATE ROLE bob;
 CREATE ROLE
 northwind=> \du
                                                                                  List of roles
-                      Role name                      |                         Attributes                         |                          Member of        
+                      Role name                      |                         Attributes                         |                          Member of      
 -----------------------------------------------------+------------------------------------------------------------+-------------------------------------------------------------
  bob                                                 | Cannot login                                               | {}
  demo                                                | Create role, Create DB                                    +| {rds_superuser}
@@ -284,7 +286,7 @@ CREATE TABLE
 INSERT 0 2
 northwind=> \dt
                                     List of relations
- Schema |          Name          | Type  |                     Owner    
+ Schema |          Name          | Type  |                     Owner  
 --------+------------------------+-------+------------------------------------------------
  public | categories             | table | demo
  public | customer_customer_demo | table | demo
@@ -372,7 +374,7 @@ northwind=> select * from test;
 ```bash
 > export BOUNDARY_ADDR=https://72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud
 
-> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb    
+> boundary authenticate oidc -auth-method-id amoidc_l17XJAoZXb  
 Opening returned authentication URL in your browser...
 https://dev-q6ml3431eugrpfdc.us.auth0.com/authorize?client_id=prJEtaNbo9NqHLf7tjKeDM5GWfmI6amc&max_age=0&nonce=D4Jv2CXeWPDzOIe6ubMv&redirect_uri=https%3A%2F%2F72a20d60-b9c3-438d-8664-dfcbaaaf0867.boundary.hashicorp.cloud%2Fv1%2Fauth-methods%2Foidc%3Aauthenticate%3Acallback&response_type=co-...
 
